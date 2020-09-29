@@ -19,6 +19,15 @@ shadowJar {
     archiveFileName ="${baseName}.${extension}"
 }
 
+jar {
+    manifest {
+        attributes(
+                'Main-Class': 'fi.hsl.transitdata.eke_sink.MainKt',
+                'Implementation-Version': project.version
+        )
+    }
+}
+
 sourceSets {
     main {
         resources {
