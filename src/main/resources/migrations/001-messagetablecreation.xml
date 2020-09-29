@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+                   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:ext="http://www.liquibase.org/xml/ns/dbchangelog-ext"
+                   xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.5.xsd
+        http://www.liquibase.org/xml/ns/dbchangelog-ext http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-ext.xsd">
+    <changeSet id="1" author="pleonard">
+        <createTable tableName="message">
+            <column name="raw_message" type="blob"></column>
+            <column name="capture_time" type="datetime"></column>
+            <column name="train_number" type="int"></column>
+            <column name="index" type="int"></column>
+            <column name="speed" type="decimal"></column>
+        </createTable>
+    </changeSet>
+</databaseChangeLog>
