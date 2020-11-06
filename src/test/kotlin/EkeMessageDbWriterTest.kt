@@ -1,6 +1,8 @@
+import fi.hsl.transitdata.eke_sink.CATENARY_VOLTAGE_OFFSET
+import fi.hsl.transitdata.eke_sink.EkeBinaryParser.CATENARY_VOLTAGE
+import fi.hsl.transitdata.eke_sink.EkeBinaryParser.EKE_TIME
 import fi.hsl.transitdata.eke_sink.EkeBinaryParser.INDEX
 import fi.hsl.transitdata.eke_sink.EkeBinaryParser.SPEED
-import fi.hsl.transitdata.eke_sink.EkeBinaryParser.TIMESTAMP
 import fi.hsl.transitdata.eke_sink.EkeBinaryParser.TRAIN_NUMBER
 import fi.hsl.transitdata.eke_sink.EkeMessageDbWriter
 import fi.hsl.transitdata.eke_sink.MESSAGE_SIZE
@@ -38,10 +40,11 @@ class EkeMessageDbWriterTest {
                 //assertEquals(1, resultSet.fetchSize)
                 resultSet.next()
                 assertEquals(byteArray.size, resultSet.getBlob(1).length().toInt())
-                assertEquals(byteArray.readField(TIMESTAMP), resultSet.getTimestamp(2))
+                assertEquals(byteArray.readField(EKE_TIME), resultSet.getTimestamp(2))
                 assertEquals(byteArray.readField(TRAIN_NUMBER), resultSet.getInt(3))
                 assertEquals(byteArray.readField(INDEX), resultSet.getInt(4))
                 assertEquals(byteArray.readField(SPEED), resultSet.getFloat(5))
+                assertEquals(byteArray.readField(CATENARY_VOLTAGE), resultSet.getFloat(6))
             }
         }
     }

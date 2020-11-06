@@ -23,6 +23,14 @@ val TO_INT = object : ByteConverter<Int> {
     }
 }
 
+val BIG_ENDIAN_TO_INT = object : ByteConverter<Int> {
+    override fun toValue(bytes: ByteArray): Int {
+        var tmpArray = bytes
+        while(tmpArray.size < 4) tmpArray = byteArrayOf(0.toByte()) + tmpArray
+        return ByteBuffer.wrap(tmpArray).order(java.nio.ByteOrder.BIG_ENDIAN).int
+    }
+}
+
 //For testing purposes
 val TO_BYTE_ARRAY = object : ByteConverter<ByteArray>{
     override fun toValue(bytes: ByteArray): ByteArray {
@@ -38,6 +46,12 @@ val TO_FLOAT = object : ByteConverter<Float> {
 val TO_DATE = object : ByteConverter<Date> {
     override fun toValue(bytes: ByteArray): Date {
         return Date(ByteBuffer.wrap(bytes.toUByteArray().asByteArray()).order(java.nio.ByteOrder.LITTLE_ENDIAN).int * 1000L )
+    }
+}
+
+val BIGENDIAN_TO_DATE = object : ByteConverter<Date> {
+    override fun toValue(bytes: ByteArray): Date {
+        return Date(ByteBuffer.wrap(bytes.toUByteArray().asByteArray()).order(java.nio.ByteOrder.BIG_ENDIAN).int * 1000L )
     }
 }
 

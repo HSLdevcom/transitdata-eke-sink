@@ -1,1 +1,1 @@
-jdbc:sqlserver://localhost:41433;user=reader1;password=LIJ_ac_user_&1;loginTimeout=30;
+jdbc:postgresql://localhost:5432/ekemessages?user=postgres&password=p1200807W

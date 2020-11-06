@@ -25,7 +25,7 @@ fun main(vararg args: String) {
     val client = OkHttpClient()
 
     //Default path is what works with Docker out-of-the-box. Override with a local file if needed
-    val secretFilePath = ConfigUtils.getEnv("FILEPATH_CONNECTION_STRING").orElse("/run/secrets/pubtrans_community_conn_string")
+    val secretFilePath = ConfigUtils.getEnv("FILEPATH_CONNECTION_STRING").orElse("/run/secrets/db_conn_string")
     val connectionString = Scanner(File(secretFilePath))
             .useDelimiter("\\Z").next()
 

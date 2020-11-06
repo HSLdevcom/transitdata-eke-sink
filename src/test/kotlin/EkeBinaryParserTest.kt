@@ -13,7 +13,6 @@ import fi.hsl.transitdata.eke_sink.EkeBinaryParser.ODOMETER
 import fi.hsl.transitdata.eke_sink.EkeBinaryParser.OUTSIDE_TEMP
 import fi.hsl.transitdata.eke_sink.EkeBinaryParser.SPEED
 import fi.hsl.transitdata.eke_sink.EkeBinaryParser.STANDSTILL
-import fi.hsl.transitdata.eke_sink.EkeBinaryParser.TIMESTAMP
 import fi.hsl.transitdata.eke_sink.EkeBinaryParser.TRAIN_NUMBER
 import fi.hsl.transitdata.eke_sink.EkeBinaryParser.VEHICLE_SHUTTING_DOWN
 import org.junit.Assert.assertEquals
@@ -45,10 +44,12 @@ class EkeBinaryParserTest {
      */
     @Test
     fun testParse(){
-        val byteArray = ByteArray(MESSAGE_SIZE);
+        var byteArray = ByteArray(MESSAGE_SIZE);
 
         File("src/test/resources/sm5_1_20200303_a").inputStream().use { inputStream ->
             inputStream.read(byteArray)
+            //Test file is missing the first bytes, let's add some padding
+            byteArray = byteArrayOf(0.toByte(),0.toByte(),0.toByte(),0.toByte(),0.toByte(),0.toByte(),0.toByte()) + byteArray
             assertEquals(74, byteArray.readField(INDEX))
             assertEquals(0, byteArray.readField(VEHICLE_SHUTTING_DOWN))
             assertEquals(0.0f, byteArray.readField(SPEED))

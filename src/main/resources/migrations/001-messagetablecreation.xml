@@ -5,11 +5,12 @@
         http://www.liquibase.org/xml/ns/dbchangelog-ext http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-ext.xsd">
     <changeSet id="1" author="pleonard">
         <createTable tableName="message">
-            <column name="raw_message" type="blob"></column>
+            <column name="raw_message" type="bytea"></column>
             <column name="capture_time" type="datetime"></column>
             <column name="train_number" type="int"></column>
             <column name="index" type="int"></column>
             <column name="speed" type="decimal"></column>
+            <column name="voltage" type="int"></column>
         </createTable>
     </changeSet>
 </databaseChangeLog>
