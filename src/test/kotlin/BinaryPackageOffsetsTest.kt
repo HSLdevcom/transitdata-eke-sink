@@ -6,15 +6,9 @@ class BinaryPackageOffsetsTest {
 
     @Test
     fun testOffsets(){
-        assertEquals(36, TRACTION_LEVER_POSITION_OFFSET)
-        assertEquals(80, POWER_CONVERTER_1A_COOLING_WATER_TEMP_OFFSET)
-        assertEquals(144, FLAGS_OFFSET)
-        assertEquals(172, TIME_OFFSET)
-
-        val toto = ByteArray(10)
-        val byte = toto[INDEX_OFFSET]
-        val int = byte.toInt()
-
-        byte.toFloat()
+        assertEquals(44, TRACTION_LEVER_POSITION_OFFSET)
+        assertEquals(88, POWER_CONVERTER_1A_COOLING_WATER_TEMP_OFFSET)
+        assertEquals(152, FLAGS_OFFSET)
+        assertEquals(180, TIME_OFFSET)
     }
 }

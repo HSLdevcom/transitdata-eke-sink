@@ -49,7 +49,7 @@ class EkeBinaryParserTest {
         File("src/test/resources/sm5_1_20200303_a").inputStream().use { inputStream ->
             inputStream.read(byteArray)
             //Test file is missing the first bytes, let's add some padding
-            byteArray = byteArrayOf(0.toByte(),0.toByte(),0.toByte(),0.toByte(),0.toByte(),0.toByte(),0.toByte()) + byteArray
+            byteArray = byteArrayOf(0.toByte(),0.toByte(),0.toByte(),0.toByte(),0.toByte(),0.toByte(),0.toByte(),0.toByte()) + byteArray
             assertEquals(74, byteArray.readField(INDEX))
             assertEquals(0, byteArray.readField(VEHICLE_SHUTTING_DOWN))
             assertEquals(0.0f, byteArray.readField(SPEED))

@@ -58,8 +58,8 @@ val BIGENDIAN_TO_DATE = object : ByteConverter<Date> {
 val TO_UNSIGNED_INT_ARRAY = object : ByteConverter<IntArray>{
     override fun toValue(bytes: ByteArray): IntArray {
         val array = IntArray(bytes.size)
-        for( i in 0.. bytes.size){
-            array[i] = TO_UNSIGNED_INT.toValue(bytes.copyOfRange(i,i))
+        for( i in bytes.indices){
+            array[i] = TO_UNSIGNED_INT.toValue(bytes.copyOfRange(i,i + 1))
         }
         return array
     }
@@ -69,7 +69,7 @@ fun <T> ByteArray.readField(field : FieldDefinition<T>) : T{
     return field.readField(this)
 }
 
-class FieldDefinition<T>(val offset : Int, val size : Int, val converter : ByteConverter<T>){
+class FieldDefinition<T>(val offset : Int, val size : Int, val converter : ByteConverter<T>, val jsonFieldName : String){
 
     fun readField(rawData : ByteArray) : T{
         return converter.toValue(rawData.copyOfRange(offset, offset + size))
