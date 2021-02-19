@@ -16,28 +16,37 @@ import mu.KotlinLogging
 import okhttp3.OkHttpClient
 import java.io.File
 import java.sql.DriverManager
+import java.text.SimpleDateFormat
 import java.time.Duration
 import java.time.LocalDateTime
 import java.time.ZoneId
 import java.util.*
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
+import java.util.zip.ZipEntry
+import java.io.FileInputStream
+
+import java.util.zip.ZipOutputStream
+
+import java.io.FileOutputStream
 
 
-const val PATH = "eke"
-val log = KotlinLogging.logger {}
+
+
+
+private val PATH = File("eke")
+private val log = KotlinLogging.logger {}
 fun main(vararg args: String) {
 
 
     val config = ConfigParser.createConfig()
 
     val client = OkHttpClient()
-    val path : File = File(PATH)
-    if(!path.exists()) path.mkdir()
+    if(!PATH.exists()) PATH.mkdir()
     try {
         PulsarApplication.newInstance(config).use { app ->
             val context = app.context
-            val messageHandler = MessageHandler(context, path, context.config!!.getString("application.outputformat"))
+            val messageHandler = MessageHandler(context, PATH, context.config!!.getString("application.outputformat"))
             setupTaskToMoveFiles(context.config!!.getString("application.blobConnectionString"),
                 context.config!!.getString("application.blobContainer"), messageHandler)
             app.launchWithHandler(messageHandler)
@@ -47,23 +56,34 @@ fun main(vararg args: String) {
     }
 }
 
+val ZIP_FILE_PATTERN = "day_%s_vehicle_%s"
+val sdfDay : SimpleDateFormat = SimpleDateFormat("dd-MM-yyyy")
 /**
  * Moves the files from the local storage to a shared azure blob
  */
-fun setupTaskToMoveFiles(blobConnectionString : String, blobContainer : String, messageHandler: MessageHandler){
+private fun setupTaskToMoveFiles(blobConnectionString : String, blobContainer : String, messageHandler: MessageHandler){
     val scheduler = Executors.newScheduledThreadPool(1)
+    val yesterday = LocalDateTime.now().minusDays(1).atZone(ZoneId.of("Europe/Helsinki"))
     val tomorrow = LocalDateTime.now().plusDays(1).withHour(3).atZone(ZoneId.of("Europe/Helsinki"))
     val now = LocalDateTime.now()
     val initialDelay = Duration.between(now, tomorrow)
     scheduler.scheduleWithFixedDelay(Runnable {
         try{
             log.info("Starting to move files to blob")
-            File(PATH).list()!!.forEach {
-                val file = File(PATH, it)
+            //Collect trains
+            val allFiles = PATH.list()!!
+            val vehicleSet = PATH.list()!!.map { it -> it.split("_vehicle_")[1].split(".")[0] }.toSet()
+            vehicleSet.forEach{
+                val vehicleId = it
+                val filesForVehicle = allFiles.filter { it -> it.contains(vehicleId)}
+                val zipFile = zipFiles(PATH, String.format(ZIP_FILE_PATTERN, sdfDay.format(yesterday), vehicleId), filesForVehicle)
                 val azureBlobClient = AzureBlobClient(blobConnectionString, blobContainer)
                 val uploader = AzureUploader(azureBlobClient)
-                uploader.uploadBlob(file)
-                file.delete()
+                uploader.uploadBlob(zipFile)
+                filesForVehicle.forEach{
+                    File(PATH, it).delete()
+                    zipFile.delete()
+                }
             }
             log.info("Done to move files to blob")
             messageHandler.ackMessages()
@@ -73,5 +93,4 @@ fun setupTaskToMoveFiles(blobConnectionString : String, blobContainer : String, 
             log.error("Something went wrong while moving the files to blob", t)
         }
     }, initialDelay.toMinutes() ,24 * 60, TimeUnit.MINUTES)
-
 }
