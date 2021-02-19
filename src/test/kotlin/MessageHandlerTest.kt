@@ -1,15 +1,12 @@
-import com.google.protobuf.ByteString
 import com.nhaarman.mockitokotlin2.any
 import com.nhaarman.mockitokotlin2.doReturn
 import com.nhaarman.mockitokotlin2.mock
-import fi.hsl.common.mqtt.proto.Mqtt
+import com.typesafe.config.Config
 import fi.hsl.common.pulsar.PulsarApplicationContext
 import fi.hsl.transitdata.eke_sink.EkeBinaryParser
 import fi.hsl.transitdata.eke_sink.EkeMessageDbWriter
-import fi.hsl.transitdata.eke_sink.MESSAGE_SIZE
 import fi.hsl.transitdata.eke_sink.MessageHandler
 import org.apache.pulsar.client.api.Consumer
-import org.apache.pulsar.client.api.Message
 import org.apache.pulsar.client.api.MessageId
 import org.json.JSONObject
 import org.junit.Assert
@@ -18,11 +15,9 @@ import org.junit.Before
 import org.junit.Test
 import org.mockito.Mockito
 import java.io.File
-import java.net.URL
 import java.nio.charset.StandardCharsets
 import java.util.*
 import java.util.concurrent.CompletableFuture
-import java.util.function.BiFunction
 
 class MessageHandlerTest {
 
@@ -44,54 +39,40 @@ class MessageHandlerTest {
 
     @Test
     fun handleMessageTest(){
-        val directory : File = File("json")
+        val directory : File = File("eke")
         if(!directory.exists()) directory.mkdir()
-        val handler = MessageHandler(mockContext, directory)
-        handler.handleMessage(createMessage())
+        val handler = MessageHandler(mockContext, directory, "csv")
+        handler.handleMessage(createFirstMqttMessage())
+        handler.ackMessages()
         Mockito.verify(mockConsumer, Mockito.times(1)).acknowledgeAsync(any<MessageId>())
-        val file = File(directory, "day_01-01-1970-02_vehicle_7777.json")
+        val file = File(directory, "day_01-01-1970-02_vehicle_7777.csv")
         assertTrue(file.exists())
-        File(directory, "day_01-01-1970-02_vehicle_7777.json").inputStream().use {
+        File(directory, "day_01-01-1970-02_vehicle_7777.csv").inputStream().use {
             inputStream ->
             val string = Scanner(inputStream, StandardCharsets.UTF_8.name()).useDelimiter("\\A").next()
-            val json = JSONObject(string)
-            Assert.assertEquals(25.1f, json.getFloat(EkeBinaryParser.CATENARY_VOLTAGE.jsonFieldName))
-            Assert.assertEquals(100, json.get(EkeBinaryParser.TOILET_FRESH_WATER_LEVEL.jsonFieldName))
-            Assert.assertEquals(0f, json.getFloat(EkeBinaryParser.SPEED.jsonFieldName))
-            Assert.assertEquals(7.4f, json.getFloat(EkeBinaryParser.OUTSIDE_TEMP.jsonFieldName))
+            //Do some test
         }
         file.delete()
         directory.delete()
     }
 
-    private fun createMessage() : Message<Any> {
-        var payload = ByteArray(MESSAGE_SIZE);
-        File("src/test/resources/sm5_1_20200303_a").inputStream().use { inputStream ->
-            inputStream.read(payload)
-            payload = byteArrayOf(0.toByte(),0.toByte(),0.toByte(),0.toByte(),0.toByte(),0.toByte(),0.toByte(),0.toByte()) + payload
+    @Test
+    fun handleMessagesTest(){
+        val directory : File = File("eke")
+        if(!directory.exists()) directory.mkdir()
+        val handler = MessageHandler(mockContext, directory, "csv")
+        getInputStreamFromTestFile().use { inputStream ->
+            while(inputStream.available() > 0){
+                val message = createMqttMessage(inputStream)
+                handler.handleMessage(message)
+            }
         }
-        val topic = "/topic/with/json/payload/#"
-        val mapper: BiFunction<String, ByteArray, ByteArray> = createMapper()
-        val mapped = mapper.apply(topic, payload)
-        val mqttMessage = Mqtt.RawMessage.parseFrom(mapped)
-        var pulsarMessage = mock<Message<Any>> {
-            on{eventTime} doReturn (Date().time)
-            on{data} doReturn (mqttMessage.toByteArray())
-            on{messageId} doReturn (mock())
-            on{getProperty("protobuf-schema")} doReturn ("mqtt-raw")
-        }
-        return pulsarMessage
-    }
+        handler.ackMessages()
+        Mockito.verify(mockConsumer, Mockito.times(1)).acknowledgeAsync(any<MessageId>())
 
-    private fun createMapper(): BiFunction<String, ByteArray, ByteArray> {
-        return BiFunction { topic: String?, payload: ByteArray? ->
-            val builder = Mqtt.RawMessage.newBuilder()
-            val raw = builder
-                    .setSchemaVersion(builder.schemaVersion)
-                    .setTopic(topic)
-                    .setPayload(ByteString.copyFrom(payload))
-                    .build()
-            raw.toByteArray()
-        }
+        val file = File(directory, "day_01-01-1970-02_vehicle_7777.csv")
+        assertTrue(file.exists())
+        file.delete()
+        directory.delete()
     }
 }

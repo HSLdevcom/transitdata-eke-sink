@@ -43,29 +43,23 @@ class EkeBinaryParserTest {
      * Test the content of the first message of the file
      */
     @Test
-    fun testParse(){
-        var byteArray = ByteArray(MESSAGE_SIZE);
-
-        File("src/test/resources/sm5_1_20200303_a").inputStream().use { inputStream ->
-            inputStream.read(byteArray)
-            //Test file is missing the first bytes, let's add some padding
-            byteArray = byteArrayOf(0.toByte(),0.toByte(),0.toByte(),0.toByte(),0.toByte(),0.toByte(),0.toByte(),0.toByte()) + byteArray
-            assertEquals(74, byteArray.readField(INDEX))
-            assertEquals(0, byteArray.readField(VEHICLE_SHUTTING_DOWN))
-            assertEquals(0.0f, byteArray.readField(SPEED))
-            assertEquals(11952, byteArray.readField(ODOMETER))
-            assertEquals(1380291, byteArray.readField(NUMBER_OF_KILOMETERS))
-            assertEquals(0.0f, byteArray.readField(ACCELERATION))
-            assertEquals(1, byteArray.readField(STANDSTILL))
-            assertEquals(13809937, byteArray.readField(ENERGY_CONSUMPTION))
-            assertEquals(5013116, byteArray.readField(ENERGY_RECUPERATION))
-            assertEquals(251, byteArray.readField(CATENARY_VOLTAGE))
-            assertEquals(19, byteArray.readField(INSIDE_TEMP_COACH_A))
-            assertEquals(74, byteArray.readField(OUTSIDE_TEMP))
-            assertEquals(1, byteArray.readField(NUMBER_OF_VEHICLES))
-            assertEquals(7777, byteArray.readField(TRAIN_NUMBER))
-            //assertEquals(60.171616f, byteArray.readField(GPSX))
-            //assertEquals(24.941479f, byteArray.readField(GPSY))
-        }
+    fun testParseOneLine(){
+        val byteArray = getFirstRawMessage()
+        assertEquals(74, byteArray.readField(INDEX))
+        assertEquals(0, byteArray.readField(VEHICLE_SHUTTING_DOWN))
+        assertEquals(0.0f, byteArray.readField(SPEED))
+        assertEquals(11952, byteArray.readField(ODOMETER))
+        assertEquals(1380291, byteArray.readField(NUMBER_OF_KILOMETERS))
+        assertEquals(0.0f, byteArray.readField(ACCELERATION))
+        assertEquals(1, byteArray.readField(STANDSTILL))
+        assertEquals(13809937, byteArray.readField(ENERGY_CONSUMPTION))
+        assertEquals(5013116, byteArray.readField(ENERGY_RECUPERATION))
+        assertEquals(251, byteArray.readField(CATENARY_VOLTAGE))
+        assertEquals(19, byteArray.readField(INSIDE_TEMP_COACH_A))
+        assertEquals(74, byteArray.readField(OUTSIDE_TEMP))
+        assertEquals(1, byteArray.readField(NUMBER_OF_VEHICLES))
+        assertEquals(7777, byteArray.readField(TRAIN_NUMBER))
+        //assertEquals(60.171616f, byteArray.readField(GPSX))
+        //assertEquals(24.941479f, byteArray.readField(GPSY))
     }
 }

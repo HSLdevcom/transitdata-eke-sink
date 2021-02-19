@@ -19,28 +19,22 @@ import org.junit.Before
 import org.junit.Test
 import java.io.File
 import java.math.BigDecimal
+import java.util.*
 import java.util.concurrent.CompletableFuture
 
 class BinaryToJsonTest {
 
     @Test
-    fun convertTest(){
-        var byteArray = ByteArray(MESSAGE_SIZE);
-        val outputPath = File("json")
-        File("src/test/resources/sm5_1_20200303_a").inputStream().use { inputStream ->
-            inputStream.read(byteArray)
-            //Test file is missing the first bytes, let's add some padding
-            byteArray = byteArrayOf(0.toByte(),0.toByte(),0.toByte(),0.toByte(),0.toByte(),0.toByte(),0.toByte(),0.toByte()) + byteArray
-            val jsonString = EkeBinaryParser.toJson(byteArray)
-            val jsonObject = JSONObject(jsonString)
-            assertEquals(1380291, jsonObject.get(NUMBER_OF_KILOMETERS.jsonFieldName))
-            /*assertEquals(60.17161458333333, jsonObject.getFloat(GPSX.jsonFieldName))
-            assertEquals(24.9414794921875, jsonObject.getFloat(GPSY.jsonFieldName))*/
-            assertEquals(25.1f, jsonObject.getFloat(CATENARY_VOLTAGE.jsonFieldName))
-            assertEquals(100, jsonObject.get(TOILET_FRESH_WATER_LEVEL.jsonFieldName))
-            assertEquals(0f, jsonObject.getFloat(SPEED.jsonFieldName))
-            assertEquals(7.4f, jsonObject.getFloat(OUTSIDE_TEMP.jsonFieldName))
-        }
+    fun convertTest() {
+        val byteArray = getFirstRawMessage()
+        val jsonString = EkeBinaryParser.toJson(byteArray)
+        val jsonObject = JSONObject(jsonString)
+        assertEquals(1380291, jsonObject.get(NUMBER_OF_KILOMETERS.jsonFieldName))
+        /*assertEquals(60.17161458333333, jsonObject.getFloat(GPSX.jsonFieldName))
+        assertEquals(24.9414794921875, jsonObject.getFloat(GPSY.jsonFieldName))*/
+        assertEquals(25.1f, jsonObject.getFloat(CATENARY_VOLTAGE.jsonFieldName))
+        assertEquals(100, jsonObject.get(TOILET_FRESH_WATER_LEVEL.jsonFieldName))
+        assertEquals(0f, jsonObject.getFloat(SPEED.jsonFieldName))
+        assertEquals(7.4f, jsonObject.getFloat(OUTSIDE_TEMP.jsonFieldName))
     }
-
 }

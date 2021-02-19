@@ -23,10 +23,10 @@ import java.sql.ResultSet
 import java.util.*
 
 class EkeMessageDbWriterTest {
-
-    @Test
+    //Not in use atm
+    //@Test
     fun testWriteOneMessageToDb(){
-        val byteArray = ByteArray(MESSAGE_SIZE);
+        val byteArray = ByteArray(MESSAGE_SIZE)
 
         DriverManager.getConnection("jdbc:h2:mem:test1", "", "" ).use { connection ->
             val database = DatabaseFactory.getInstance().findCorrectDatabaseImplementation(JdbcConnection(connection))
@@ -51,7 +51,7 @@ class EkeMessageDbWriterTest {
 
     @Test
     fun testWriteAllMessagesToDb(){
-        val byteArray = ByteArray(MESSAGE_SIZE);
+        val byteArray = ByteArray(MESSAGE_SIZE)
 
         DriverManager.getConnection("jdbc:h2:mem:test2", "", "" ).use { connection ->
             val database = DatabaseFactory.getInstance().findCorrectDatabaseImplementation(JdbcConnection(connection))

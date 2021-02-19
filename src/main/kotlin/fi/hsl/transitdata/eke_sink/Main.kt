@@ -24,7 +24,7 @@ import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 
 
-const val PATH = "json"
+const val PATH = "eke"
 val log = KotlinLogging.logger {}
 fun main(vararg args: String) {
 
@@ -37,7 +37,7 @@ fun main(vararg args: String) {
     try {
         PulsarApplication.newInstance(config).use { app ->
             val context = app.context
-            val messageHandler = MessageHandler(context, path)
+            val messageHandler = MessageHandler(context, path, context.config!!.getString("application.outputformat"))
             setupTaskToMoveFiles(context.config!!.getString("application.blobConnectionString"),
                 context.config!!.getString("application.blobContainer"), messageHandler)
             app.launchWithHandler(messageHandler)
