@@ -5,13 +5,6 @@ import fi.hsl.common.config.ConfigUtils
 import fi.hsl.common.pulsar.PulsarApplication
 import fi.hsl.transitdata.eke_sink.azure.AzureBlobClient
 import fi.hsl.transitdata.eke_sink.azure.AzureUploader
-import liquibase.Contexts
-import liquibase.LabelExpression
-import liquibase.Liquibase
-import liquibase.database.DatabaseFactory
-import liquibase.database.jvm.JdbcConnection
-import liquibase.resource.ClassLoaderResourceAccessor
-import liquibase.resource.FileSystemResourceAccessor
 import mu.KotlinLogging
 import okhttp3.OkHttpClient
 import java.io.File
