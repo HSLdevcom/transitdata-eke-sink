@@ -24,12 +24,13 @@ import java.io.FileWriter
 import java.nio.file.Files
 import java.nio.file.StandardOpenOption
 
+const val TOPIC_PREFIX = "eke/v1/sm5/"
 
 class MessageHandler(val context: PulsarApplicationContext, private val path : File, private val outputFormat : String) : IMessageHandler {
 
     private val log = KotlinLogging.logger {}
-    private val JSON_FILE_NAME_PATTERN = "day_%s_vehicle_%s.json"
-    private val CSV_FILE_NAME_PATTERN = "day_%s_vehicle_%s.csv"
+    private val JSON_FILE_NAME_PATTERN = "day_%s_unit_%s.json"
+    private val CSV_FILE_NAME_PATTERN = "day_%s_unit_%s.csv"
     private val consumer: Consumer<ByteArray> = context.consumer!!
     private val sdfDayHour : SimpleDateFormat = SimpleDateFormat("dd-MM-yyyy-HH")
     private var lastHandledMessage : MessageId? = null
@@ -42,10 +43,10 @@ class MessageHandler(val context: PulsarApplicationContext, private val path : F
             val raw = Mqtt.RawMessage.parseFrom(data)
             val rawPayload = raw.payload.toByteArray()
             if(outputFormat == "csv"){
-                writeToCSVFile(rawPayload)
+                writeToCSVFile(rawPayload, raw.topic)
             }
             else{
-                writeToJsonFile(rawPayload)
+                writeToJsonFile(rawPayload, raw.topic)
             }
             val messageSummary = Eke.EkeSummary.newBuilder()
                 .setEkeDate(rawPayload.readField(EKE_TIME).toInstant().toEpochMilli())
@@ -82,27 +83,31 @@ class MessageHandler(val context: PulsarApplicationContext, private val path : F
             .sendAsync()
     }
 
-    private fun writeToCSVFile(payload: ByteArray){
+    private fun getUnitNumber(topic : String) : String{
+        return topic.replace(TOPIC_PREFIX,"").split("/")[0]
+    }
+
+
+
+    private fun writeToCSVFile(payload: ByteArray, topic : String){
         val date = payload.readField(EKE_TIME)
-        val vehicle = payload.readField(TRAIN_NUMBER)
-        val file = File(path, String.format(CSV_FILE_NAME_PATTERN, sdfDayHour.format(date), vehicle))
+        val file = File(path, String.format(CSV_FILE_NAME_PATTERN, sdfDayHour.format(date), getUnitNumber(topic)))
         val csvPrinter = if(file.exists()){
             CSVPrinter(FileWriter(file, true), CSVFormat.DEFAULT.withDelimiter(";".single()))
         }
         else{
-            CSVPrinter(FileWriter(file, false), CSVFormat.DEFAULT.withDelimiter(";".single()).withHeader(*EkeBinaryParser.fields.map {it.jsonFieldName }.toTypedArray()))
+            CSVPrinter(FileWriter(file, false), CSVFormat.DEFAULT.withDelimiter(";".single()).withHeader(*EkeBinaryParser.fields.map {it.jsonFieldName }.toTypedArray(), "topic"))
         }
         csvPrinter.use {
-            csvPrinter.printRecord(*EkeBinaryParser.fields.map {it.toString(payload) }.toTypedArray())
+            csvPrinter.printRecord(*EkeBinaryParser.fields.map {it.toString(payload) }.toTypedArray(), topic)
             csvPrinter.flush()
         }
     }
 
-    private fun writeToJsonFile(payload: ByteArray){
+    private fun writeToJsonFile(payload: ByteArray, topic : String){
         val date = payload.readField(EKE_TIME)
-        val vehicle = payload.readField(TRAIN_NUMBER)
-        val apcJson = EkeBinaryParser.toJson(payload)
-        val file = File(path, String.format(JSON_FILE_NAME_PATTERN, sdfDayHour.format(date), vehicle))
+        val apcJson = EkeBinaryParser.toJson(payload, topic)
+        val file = File(path, String.format(JSON_FILE_NAME_PATTERN, sdfDayHour.format(date), getUnitNumber(topic)))
         if(!file.exists()) file.createNewFile()
         file.appendText("${apcJson}\n")
     }

@@ -15,6 +15,8 @@ fun interface StringFormatter<T>{
     fun toString(value : T) : String
 }
 
+val HELSINKI_TZ = ZoneId.of("Europe/Helsinki")
+
 val TO_UNSIGNED_INT = ByteConverter { bytes : ByteArray ->
     var tmpArray = bytes
     while(tmpArray.size < 4) tmpArray += byteArrayOf(0.toByte())
@@ -39,8 +41,8 @@ val TO_BYTE_ARRAY = ByteConverter<ByteArray> {  bytes : ByteArray -> bytes }
 val TO_FLOAT = ByteConverter<Float> {  bytes : ByteArray -> ByteBuffer.wrap(bytes).order(java.nio.ByteOrder.LITTLE_ENDIAN).float }
 val TO_DATE_FROM_EET = ByteConverter<Date> { bytes ->
     val rawInstant = Instant.ofEpochSecond(ByteBuffer.wrap(bytes.toUByteArray().asByteArray()).order(java.nio.ByteOrder.LITTLE_ENDIAN).int.toLong())
-    val offset = ZoneId.of("Europe/Helsinki").rules.getOffset(rawInstant)
-    val ldt = LocalDateTime.ofInstant(rawInstant, ZoneOffset.UTC).minusSeconds(offset.totalSeconds.toLong())
+    val offset = HELSINKI_TZ.rules.getOffset(rawInstant)
+    val ldt = LocalDateTime.ofInstant(rawInstant, ZoneOffset.UTC)
     Date(ldt.toEpochSecond(offset) * 1000L)
 }
 
@@ -49,6 +51,14 @@ val TO_DATE =
 
 val BIGENDIAN_TO_DATE =
     ByteConverter<Date> {  bytes : ByteArray -> Date(ByteBuffer.wrap(bytes.toUByteArray().asByteArray()).order(java.nio.ByteOrder.BIG_ENDIAN).int * 1000L ) }
+
+val BIGENDIAN_TO_DATE_FROM_EET =
+    ByteConverter<Date> { bytes : ByteArray ->
+        val rawInstant = Instant.ofEpochSecond(ByteBuffer.wrap(bytes.toUByteArray().asByteArray()).order(java.nio.ByteOrder.BIG_ENDIAN).int.toLong())
+        val offset = HELSINKI_TZ.rules.getOffset(rawInstant)
+        val ldt = LocalDateTime.ofInstant(rawInstant, ZoneOffset.UTC)
+        Date(ldt.toEpochSecond(offset) * 1000L)
+    }
 
 val TO_UNSIGNED_INT_ARRAY = ByteConverter<IntArray> {  bytes : ByteArray ->
     val array = IntArray(bytes.size)

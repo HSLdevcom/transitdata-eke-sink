@@ -8,7 +8,7 @@ object EkeBinaryParser {
 
 
     val MQTT_HEADER_1ST_PART = FieldDefinition(MQTT_HEADER_1ST_PART_OFFSET, MQTT_HEADER_1ST_PART_SIZE, TO_INT, "header")
-    val EKE_TIME = FieldDefinition(EKE_TIME_OFFSET, EKE_TIME_SIZE, BIGENDIAN_TO_DATE, "EKETime")
+    val EKE_TIME = FieldDefinition(EKE_TIME_OFFSET, EKE_TIME_SIZE, BIGENDIAN_TO_DATE_FROM_EET, "EKETime")
     val EKE_HUNDRED_OF_SECONDS = FieldDefinition(EKE_HUNDRED_OF_SECONDS_OFFSET, EKE_HUNDRED_OF_SECONDS_SIZE, BIG_ENDIAN_TO_INT, "hundredsOfSeconds")
     val NTP_TIME = FieldDefinition(NTP_TIME_OFFSET, NTP_TIME_SIZE, BIGENDIAN_TO_DATE, "NTPTime")
     val NTP_HUNDRED_OF_SECONDS = FieldDefinition(NTP_HUNDRED_OF_SECONDS_OFFSET, NTP_HUNDRED_OF_SECONDS_SIZE, BIG_ENDIAN_TO_INT, "NTPHundredsOfSeconds")
@@ -101,7 +101,7 @@ object EkeBinaryParser {
         )
 
 
-    fun toJson(payload : ByteArray) : String {
+    fun toJson(payload : ByteArray, topic : String) : String {
         return "{" +
             """"${MQTT_HEADER_1ST_PART.jsonFieldName}" : ${payload.readField(MQTT_HEADER_1ST_PART)},""" +
             """"${EKE_TIME.jsonFieldName}" : "${payload.readField(EKE_TIME)}",""" +
@@ -176,6 +176,7 @@ object EkeBinaryParser {
             """"${GPSX.jsonFieldName}" : ${NMEAToGPS(payload.readField(GPSX).toDouble())},""" +
             """"${GPSY.jsonFieldName}" : ${NMEAToGPS(payload.readField(GPSY).toDouble())},""" +
             """"${TIME.jsonFieldName}" : "${payload.readField(TIME)}"""" +
+            """"topic" : "$topic"""" +
             "}"
     }
 
