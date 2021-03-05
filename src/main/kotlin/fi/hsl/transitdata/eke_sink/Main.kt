@@ -47,7 +47,7 @@ fun main(vararg args: String) {
     }
 }
 
-val ZIP_FILE_PATTERN = "day_%s_vehicle_%s"
+val ZIP_FILE_PATTERN = "day_%s_vehicle_%s.zip"
 val sdfDay  = DateTimeFormatter.ofPattern ("dd-MM-yyyy")
 /**
  * Moves the files from the local storage to a shared azure blob
