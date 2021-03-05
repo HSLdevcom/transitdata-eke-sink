@@ -22,9 +22,7 @@ import java.io.FileInputStream
 import java.util.zip.ZipOutputStream
 
 import java.io.FileOutputStream
-
-
-
+import java.time.format.DateTimeFormatter
 
 
 private val PATH = File("eke")
@@ -50,7 +48,7 @@ fun main(vararg args: String) {
 }
 
 val ZIP_FILE_PATTERN = "day_%s_vehicle_%s"
-val sdfDay : SimpleDateFormat = SimpleDateFormat("dd-MM-yyyy")
+val sdfDay  = DateTimeFormatter.ofPattern ("dd-MM-yyyy")
 /**
  * Moves the files from the local storage to a shared azure blob
  */
@@ -65,7 +63,7 @@ private fun setupTaskToMoveFiles(blobConnectionString : String, blobContainer : 
             log.info("Starting to move files to blob")
             //Collect trains
             val allFiles = PATH.list()!!
-            val vehicleSet = PATH.list()!!.map { it -> it.split("_vehicle_")[1].split(".")[0] }.toSet()
+            val vehicleSet = PATH.list()!!.map { it -> it.split("_unit_")[1].split(".")[0] }.toSet()
             vehicleSet.forEach{
                 val vehicleId = it
                 val filesForVehicle = allFiles.filter { it -> it.contains(vehicleId)}
