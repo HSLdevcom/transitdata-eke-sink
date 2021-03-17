@@ -42,18 +42,24 @@ class MessageHandler(val context: PulsarApplicationContext, private val path : F
             val data: ByteArray = received.data
             val raw = Mqtt.RawMessage.parseFrom(data)
             val rawPayload = raw.payload.toByteArray()
-            if(outputFormat == "csv"){
-                writeToCSVFile(rawPayload, raw.topic)
+            if(rawPayload.size != MESSAGE_SIZE){
+                //Ignore
+                //log.warn("Message is ${rawPayload.size} bytes long, expecting $MESSAGE_SIZE, ignoring")
             }
             else{
-                writeToJsonFile(rawPayload, raw.topic)
+                if(outputFormat == "csv"){
+                    writeToCSVFile(rawPayload, raw.topic)
+                }
+                else{
+                    writeToJsonFile(rawPayload, raw.topic)
+                }
+                val messageSummary = Eke.EkeSummary.newBuilder()
+                    .setEkeDate(rawPayload.readField(EKE_TIME).toInstant().toEpochMilli())
+                    .setTrainNumber(rawPayload.readField(TRAIN_NUMBER))
+                    .setTopicPart(raw.topic)
+                    .build()
+                sendMessageSummary(messageSummary)
             }
-            val messageSummary = Eke.EkeSummary.newBuilder()
-                .setEkeDate(rawPayload.readField(EKE_TIME).toInstant().toEpochMilli())
-                .setTrainNumber(rawPayload.readField(TRAIN_NUMBER))
-                .setTopicPart(raw.topic)
-                .build()
-            sendMessageSummary(messageSummary)
             handledMessages++
             if(handledMessages == 100000){
                 log.info("Handled 100000 messages, everything seems fine")
