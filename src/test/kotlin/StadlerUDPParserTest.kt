@@ -1,27 +1,25 @@
 import fi.hsl.transitdata.eke_sink.*
-import fi.hsl.transitdata.eke_sink.EkeBinaryParser.ACCELERATION
-import fi.hsl.transitdata.eke_sink.EkeBinaryParser.CATENARY_VOLTAGE
-import fi.hsl.transitdata.eke_sink.EkeBinaryParser.ENERGY_CONSUMPTION
-import fi.hsl.transitdata.eke_sink.EkeBinaryParser.ENERGY_RECUPERATION
-import fi.hsl.transitdata.eke_sink.EkeBinaryParser.GPSX
-import fi.hsl.transitdata.eke_sink.EkeBinaryParser.GPSY
-import fi.hsl.transitdata.eke_sink.EkeBinaryParser.INDEX
-import fi.hsl.transitdata.eke_sink.EkeBinaryParser.INSIDE_TEMP_COACH_A
-import fi.hsl.transitdata.eke_sink.EkeBinaryParser.NUMBER_OF_KILOMETERS
-import fi.hsl.transitdata.eke_sink.EkeBinaryParser.NUMBER_OF_VEHICLES
-import fi.hsl.transitdata.eke_sink.EkeBinaryParser.ODOMETER
-import fi.hsl.transitdata.eke_sink.EkeBinaryParser.OUTSIDE_TEMP
-import fi.hsl.transitdata.eke_sink.EkeBinaryParser.SPEED
-import fi.hsl.transitdata.eke_sink.EkeBinaryParser.STANDSTILL
-import fi.hsl.transitdata.eke_sink.EkeBinaryParser.TRAIN_NUMBER
-import fi.hsl.transitdata.eke_sink.EkeBinaryParser.VEHICLE_SHUTTING_DOWN
+import fi.hsl.transitdata.eke_sink.converters.readField
+import fi.hsl.transitdata.eke_sink.messages.stadlerUDP.StadlerUDPParser.ACCELERATION
+import fi.hsl.transitdata.eke_sink.messages.stadlerUDP.StadlerUDPParser.CATENARY_VOLTAGE
+import fi.hsl.transitdata.eke_sink.messages.stadlerUDP.StadlerUDPParser.ENERGY_CONSUMPTION
+import fi.hsl.transitdata.eke_sink.messages.stadlerUDP.StadlerUDPParser.ENERGY_RECUPERATION
+import fi.hsl.transitdata.eke_sink.messages.stadlerUDP.StadlerUDPParser.INDEX
+import fi.hsl.transitdata.eke_sink.messages.stadlerUDP.StadlerUDPParser.INSIDE_TEMP_COACH_A
+import fi.hsl.transitdata.eke_sink.messages.stadlerUDP.StadlerUDPParser.NUMBER_OF_KILOMETERS
+import fi.hsl.transitdata.eke_sink.messages.stadlerUDP.StadlerUDPParser.NUMBER_OF_VEHICLES
+import fi.hsl.transitdata.eke_sink.messages.stadlerUDP.StadlerUDPParser.ODOMETER
+import fi.hsl.transitdata.eke_sink.messages.stadlerUDP.StadlerUDPParser.OUTSIDE_TEMP
+import fi.hsl.transitdata.eke_sink.messages.stadlerUDP.StadlerUDPParser.SPEED
+import fi.hsl.transitdata.eke_sink.messages.stadlerUDP.StadlerUDPParser.STANDSTILL
+import fi.hsl.transitdata.eke_sink.messages.stadlerUDP.StadlerUDPParser.TRAIN_NUMBER
+import fi.hsl.transitdata.eke_sink.messages.stadlerUDP.StadlerUDPParser.VEHICLE_SHUTTING_DOWN
 import org.junit.Assert.assertEquals
 import org.junit.Test
-import java.io.File
 import java.nio.charset.StandardCharsets
 import kotlin.experimental.and
 
-class EkeBinaryParserTest {
+class StadlerUDPParserTest {
 
 
     private val hexArray = "0123456789ABCDEF".toCharArray()

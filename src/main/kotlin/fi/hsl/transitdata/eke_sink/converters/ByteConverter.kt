@@ -1,4 +1,4 @@
-package fi.hsl.transitdata.eke_sink
+package fi.hsl.transitdata.eke_sink.converters
 
 import java.nio.ByteBuffer
 import java.time.Instant
@@ -6,6 +6,7 @@ import java.time.LocalDateTime
 import java.time.ZoneId
 import java.time.ZoneOffset
 import java.util.*
+
 
 fun interface ByteConverter<T>{
     fun toValue(bytes : ByteArray) : T
@@ -68,11 +69,30 @@ val TO_UNSIGNED_INT_ARRAY = ByteConverter<IntArray> {  bytes : ByteArray ->
     array
 }
 
+val TO_STRING = ByteConverter<String> {
+    bytes -> String(bytes, Charsets.US_ASCII)
+}
+
 fun <T> ByteArray.readField(field : FieldDefinition<T>) : T{
     return field.readField(this)
 }
 
-class FieldDefinition<T>(val offset : Int, val size : Int, val converter : ByteConverter<T>, val jsonFieldName : String, val stringFormatter : StringFormatter<T>? = null){
+class FieldDefinition<T>{
+
+    val offset : Int
+    val size : Int
+    val converter : ByteConverter<T>
+    val fieldName : String
+    val stringFormatter : StringFormatter<T>?
+
+    constructor(previousField : FieldDefinition<*>?, size : Int, converter: ByteConverter<T>, fieldName: String, stringFormatter: StringFormatter<T>? = null){
+        this.offset = if(previousField == null) 0 else previousField.offset + previousField.size
+        this.size = size
+        this.converter = converter
+        this.fieldName = fieldName
+        this.stringFormatter = stringFormatter
+    }
+
 
     fun readField(rawData : ByteArray) : T{
         return converter.toValue(rawData.copyOfRange(offset, offset + size))

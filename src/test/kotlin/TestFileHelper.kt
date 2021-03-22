@@ -2,7 +2,7 @@ import com.google.protobuf.ByteString
 import com.nhaarman.mockitokotlin2.doReturn
 import com.nhaarman.mockitokotlin2.mock
 import fi.hsl.common.mqtt.proto.Mqtt
-import fi.hsl.transitdata.eke_sink.MESSAGE_SIZE
+import fi.hsl.transitdata.eke_sink.messages.stadlerUDP.StadlerUDPParser.STADLER_UDP_SIZE
 import org.apache.pulsar.client.api.Message
 import java.io.File
 import java.io.InputStream
@@ -23,7 +23,7 @@ fun getFirstRawMessage() : ByteArray{
 }
 
 fun getRawMessage (inputStream : InputStream) : ByteArray{
-    val arraySize = MESSAGE_SIZE - MQTT_HEADER_SIZE + TIMESTAMP_SIZE
+    val arraySize = STADLER_UDP_SIZE - MQTT_HEADER_SIZE + TIMESTAMP_SIZE
     var payload = ByteArray(arraySize)
     inputStream.read(payload)
     //The first bytes are a timestamp, missing from mqtt data, let's remove it
@@ -48,7 +48,7 @@ fun createMqttMessage(inputStream : InputStream) : Message<Any> {
 }
 
 fun createFirstMqttMessage() : Message<Any> {
-    var payload = ByteArray(MESSAGE_SIZE)
+    var payload = ByteArray(STADLER_UDP_SIZE)
     File("src/test/resources/sm5_1_20200303_a").inputStream().use { inputStream ->
         return createMqttMessage(inputStream)
     }

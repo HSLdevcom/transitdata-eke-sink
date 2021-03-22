@@ -1,15 +1,11 @@
 import com.nhaarman.mockitokotlin2.any
 import com.nhaarman.mockitokotlin2.doReturn
 import com.nhaarman.mockitokotlin2.mock
-import com.typesafe.config.Config
 import fi.hsl.common.pulsar.PulsarApplicationContext
-import fi.hsl.transitdata.eke_sink.EkeBinaryParser
-import fi.hsl.transitdata.eke_sink.EkeMessageDbWriter
+import fi.hsl.transitdata.eke_sink.messages.stadlerUDP.EkeMessageDbWriter
 import fi.hsl.transitdata.eke_sink.MessageHandler
 import org.apache.pulsar.client.api.Consumer
 import org.apache.pulsar.client.api.MessageId
-import org.json.JSONObject
-import org.junit.Assert
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
