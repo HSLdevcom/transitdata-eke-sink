@@ -2,10 +2,6 @@ package fi.hsl.transitdata.eke_sink.messages.stadlerUDP
 
 import fi.hsl.transitdata.eke_sink.converters.readField
 import fi.hsl.transitdata.eke_sink.messages.mqtt_header.EKE_TIME
-import fi.hsl.transitdata.eke_sink.messages.stadlerUDP.StadlerUDPParser.CATENARY_VOLTAGE
-import fi.hsl.transitdata.eke_sink.messages.stadlerUDP.StadlerUDPParser.INDEX
-import fi.hsl.transitdata.eke_sink.messages.stadlerUDP.StadlerUDPParser.SPEED
-import fi.hsl.transitdata.eke_sink.messages.stadlerUDP.StadlerUDPParser.TRAIN_NUMBER
 import mu.KotlinLogging
 import java.io.File
 import java.sql.Connection
