@@ -9,7 +9,7 @@ import fi.hsl.transitdata.eke_sink.messages.mqtt_header.NTP_HUNDRED_OF_SECONDS
 import fi.hsl.transitdata.eke_sink.messages.mqtt_header.headerFields
 import java.io.File
 
-//TODO this one will need a custim parser
+//TODO this one will need a custom parser
 val BALIISI = FieldDefinition(NTP_HUNDRED_OF_SECONDS, 16, TO_BYTE_ARRAY, "Baliisi")
 
 val TRANSPONDER_PART = FieldDefinition(NTP_HUNDRED_OF_SECONDS, 1, TO_INT, "TransponderPart")
@@ -23,10 +23,10 @@ object RmmJkvBeaconParser : Parser(arrayOf(*headerFields, TRANSPONDER_PART, CRC_
 
     var i = 0
     override fun getFieldValues(payload : ByteArray) : Array<String>{
-        val file = File(PATH, "rmmjkvbeacon" + i + ".dat")
+        /*val file = File(PATH, "rmmjkvbeacon" + i + ".dat")
         if(!file.exists()) file.createNewFile()
         file.appendBytes(payload)
-        i++
+        i++*/
         return arrayOf("")
     }
 
