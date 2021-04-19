@@ -2,7 +2,7 @@ import com.google.protobuf.ByteString
 import com.nhaarman.mockitokotlin2.doReturn
 import com.nhaarman.mockitokotlin2.mock
 import fi.hsl.common.mqtt.proto.Mqtt
-import fi.hsl.transitdata.eke_sink.messages.stadlerUDP.StadlerUDPParser.STADLER_UDP_SIZE
+import fi.hsl.transitdata.eke_sink.messages.stadlerUDP.STADLER_UDP_SIZE
 import org.apache.pulsar.client.api.Message
 import java.io.File
 import java.io.InputStream
@@ -32,25 +32,24 @@ fun getRawMessage (inputStream : InputStream) : ByteArray{
     return byteArrayOf(0.toByte(),0.toByte(),0.toByte(),0.toByte(),0.toByte(),0.toByte(),0.toByte(),0.toByte(),0.toByte(),0.toByte(),0.toByte(),0.toByte()) + payload
 }
 
-fun createMqttMessage(inputStream : InputStream) : Message<Any> {
+fun createMqttMessage(inputStream: InputStream, topic: String): Message<Any> {
     val payload = getRawMessage(inputStream)
-    val topic = "/topic/with/json/payload/#"
+    val topic = topic
     val mapper: BiFunction<String, ByteArray, ByteArray> = createMapper()
     val mapped = mapper.apply(topic, payload)
     val mqttMessage = Mqtt.RawMessage.parseFrom(mapped)
-    var pulsarMessage = mock<Message<Any>> {
-        on{eventTime} doReturn (Date().time)
-        on{data} doReturn (mqttMessage.toByteArray())
-        on{messageId} doReturn (mock())
-        on{getProperty("protobuf-schema")} doReturn ("mqtt-raw")
+    return mock {
+        on { eventTime } doReturn (Date().time)
+        on { data } doReturn (mqttMessage.toByteArray())
+        on { messageId } doReturn (mock())
+        on { getProperty("protobuf-schema") } doReturn ("mqtt-raw")
     }
-    return pulsarMessage
 }
 
 fun createFirstMqttMessage() : Message<Any> {
     var payload = ByteArray(STADLER_UDP_SIZE)
     File("src/test/resources/sm5_1_20200303_a").inputStream().use { inputStream ->
-        return createMqttMessage(inputStream)
+        return createMqttMessage(inputStream, "eke/v1/sm5/7777/stadlerUDP")
     }
 
 }

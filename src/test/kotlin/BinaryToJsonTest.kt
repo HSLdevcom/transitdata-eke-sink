@@ -1,9 +1,4 @@
-import fi.hsl.transitdata.eke_sink.messages.stadlerUDP.StadlerUDPParser
-import fi.hsl.transitdata.eke_sink.messages.stadlerUDP.StadlerUDPParser.CATENARY_VOLTAGE
-import fi.hsl.transitdata.eke_sink.messages.stadlerUDP.StadlerUDPParser.NUMBER_OF_KILOMETERS
-import fi.hsl.transitdata.eke_sink.messages.stadlerUDP.StadlerUDPParser.OUTSIDE_TEMP
-import fi.hsl.transitdata.eke_sink.messages.stadlerUDP.StadlerUDPParser.SPEED
-import fi.hsl.transitdata.eke_sink.messages.stadlerUDP.StadlerUDPParser.TOILET_FRESH_WATER_LEVEL
+import fi.hsl.transitdata.eke_sink.messages.stadlerUDP.*
 
 
 import org.json.JSONObject

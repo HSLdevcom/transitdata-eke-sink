@@ -321,7 +321,7 @@ object StadlerUDPParser : Parser(arrayOf(*headerFields, INDEX,
             """"${RESERVED6.fieldName}" : ${payload.readField(RESERVED6)},""" +
             """"${GPSX.fieldName}" : ${NMEAToGPS(payload.readField(GPSX).toDouble())},""" +
             """"${GPSY.fieldName}" : ${NMEAToGPS(payload.readField(GPSY).toDouble())},""" +
-            """"${TIME.fieldName}" : "${payload.readField(TIME)}"""" +
+            """"${TIME.fieldName}" : "${payload.readField(TIME)}",""" +
             """"topic" : "$topic"""" +
             "}"
     }
