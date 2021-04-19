@@ -50,7 +50,7 @@ dependencies {
     implementation "com.azure:azure-storage-blob:12.0.0"
     implementation "com.azure:azure-storage-queue:12.0.0"
     implementation "org.apache.commons:commons-csv:1.8"
-    testCompile 'com.h2database:h2:1.4.200'
+    //testCompile 'com.h2database:h2:1.4.200'
     testCompile "com.nhaarman.mockitokotlin2:mockito-kotlin:2.2.0"
     testImplementation 'org.json:json:20201115'
     //implementation  fileTree(dir: 'libs', include: '*.jar')

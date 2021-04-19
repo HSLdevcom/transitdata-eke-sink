@@ -1,15 +1,14 @@
 import com.nhaarman.mockitokotlin2.any
 import com.nhaarman.mockitokotlin2.doReturn
 import com.nhaarman.mockitokotlin2.mock
-import com.typesafe.config.Config
+import com.nhaarman.mockitokotlin2.withSettings
 import fi.hsl.common.pulsar.PulsarApplicationContext
-import fi.hsl.transitdata.eke_sink.EkeBinaryParser
-import fi.hsl.transitdata.eke_sink.EkeMessageDbWriter
+import fi.hsl.transitdata.eke_sink.messages.stadlerUDP.EkeMessageDbWriter
 import fi.hsl.transitdata.eke_sink.MessageHandler
 import org.apache.pulsar.client.api.Consumer
 import org.apache.pulsar.client.api.MessageId
-import org.json.JSONObject
-import org.junit.Assert
+import org.apache.pulsar.client.api.Producer
+import org.apache.pulsar.client.api.TypedMessageBuilder
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -23,15 +22,26 @@ class MessageHandlerTest {
 
     lateinit var mockContext: PulsarApplicationContext
     lateinit var mockConsumer: Consumer<ByteArray>
+    lateinit var mockProducer: Producer<ByteArray>
     lateinit var mockDbWriter : EkeMessageDbWriter
+    lateinit var mockMessage : TypedMessageBuilder<ByteArray>
 
     @Before
     fun before(){
         mockConsumer = mock<Consumer<ByteArray>>{
             on{acknowledgeAsync(any<MessageId>())} doReturn (CompletableFuture<Void>())
         }
+        mockMessage = mock<TypedMessageBuilder<ByteArray>>(stubOnly = true){
+            on{sendAsync()} doReturn (CompletableFuture<MessageId>())
+            on{property(any<String>(), any<String>())} doReturn (it)
+            on{value(any<ByteArray>())} doReturn(it)
+        }
+        mockProducer = mock<Producer<ByteArray>>{
+            on{newMessage()} doReturn(mockMessage)
+        }
         mockContext = mock<PulsarApplicationContext>{
             on{consumer} doReturn (mockConsumer)
+            on{singleProducer} doReturn (mockProducer)
         }
         mockDbWriter = mock {
         }
@@ -45,9 +55,9 @@ class MessageHandlerTest {
         handler.handleMessage(createFirstMqttMessage())
         handler.ackMessages()
         Mockito.verify(mockConsumer, Mockito.times(1)).acknowledgeAsync(any<MessageId>())
-        val file = File(directory, "day_01-01-1970-02_vehicle_7777.csv")
+        val file = File(directory, "topic_stadlerUDP_day_01-01-1970-00_unit_7777.csv")
         assertTrue(file.exists())
-        File(directory, "day_01-01-1970-02_vehicle_7777.csv").inputStream().use {
+        File(directory, "topic_stadlerUDP_day_01-01-1970-00_unit_7777.csv").inputStream().use {
             inputStream ->
             val string = Scanner(inputStream, StandardCharsets.UTF_8.name()).useDelimiter("\\A").next()
             //Do some test
@@ -63,16 +73,17 @@ class MessageHandlerTest {
         val handler = MessageHandler(mockContext, directory, "csv")
         getInputStreamFromTestFile().use { inputStream ->
             while(inputStream.available() > 0){
-                val message = createMqttMessage(inputStream)
+                val message = createMqttMessage(inputStream, "eke/v1/sm5/7777/stadlerUDP")
                 handler.handleMessage(message)
             }
         }
         handler.ackMessages()
         Mockito.verify(mockConsumer, Mockito.times(1)).acknowledgeAsync(any<MessageId>())
 
-        val file = File(directory, "day_01-01-1970-02_vehicle_7777.csv")
+        val file = File(directory, "topic_stadlerUDP_day_01-01-1970-00_unit_7777.csv")
         assertTrue(file.exists())
         file.delete()
         directory.delete()
     }
 }
+

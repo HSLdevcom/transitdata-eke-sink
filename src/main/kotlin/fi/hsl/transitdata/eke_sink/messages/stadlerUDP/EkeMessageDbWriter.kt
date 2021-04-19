@@ -1,14 +1,10 @@
-package fi.hsl.transitdata.eke_sink
+package fi.hsl.transitdata.eke_sink.messages.stadlerUDP
 
-import fi.hsl.transitdata.eke_sink.EkeBinaryParser.CATENARY_VOLTAGE
-import fi.hsl.transitdata.eke_sink.EkeBinaryParser.EKE_TIME
-import fi.hsl.transitdata.eke_sink.EkeBinaryParser.INDEX
-import fi.hsl.transitdata.eke_sink.EkeBinaryParser.SPEED
-import fi.hsl.transitdata.eke_sink.EkeBinaryParser.TRAIN_NUMBER
+import fi.hsl.transitdata.eke_sink.converters.readField
+import fi.hsl.transitdata.eke_sink.messages.mqtt_header.EKE_TIME
 import mu.KotlinLogging
 import java.io.File
 import java.sql.Connection
-import java.sql.Date
 import java.sql.Timestamp
 
 class EkeMessageDbWriter (val dbConnection : Connection) {

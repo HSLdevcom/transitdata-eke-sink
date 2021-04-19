@@ -5,9 +5,18 @@ import fi.hsl.common.pulsar.IMessageHandler
 import fi.hsl.common.pulsar.PulsarApplicationContext
 import fi.hsl.common.transitdata.TransitdataProperties
 import fi.hsl.common.transitdata.proto.Eke
-import fi.hsl.transitdata.eke_sink.EkeBinaryParser.EKE_TIME
-import fi.hsl.transitdata.eke_sink.EkeBinaryParser.TIME
-import fi.hsl.transitdata.eke_sink.EkeBinaryParser.TRAIN_NUMBER
+import fi.hsl.transitdata.eke_sink.converters.readField
+import fi.hsl.transitdata.eke_sink.messages.Parser
+import fi.hsl.transitdata.eke_sink.messages.id_struct.IdStructParser
+import fi.hsl.transitdata.eke_sink.messages.mqtt_header.EKE_TIME
+import fi.hsl.transitdata.eke_sink.messages.stadlerUDP.StadlerUDPParser
+import fi.hsl.transitdata.eke_sink.messages.rmm_io_struct.RmmIoStructParser
+import fi.hsl.transitdata.eke_sink.messages.rmm_jkv_beacon.RmmJkvBeaconParser
+import fi.hsl.transitdata.eke_sink.messages.rmm_jkv_struct.RmmJkvStructParser
+import fi.hsl.transitdata.eke_sink.messages.rmm_jkv_train_msg.RmmJkvTrainMsgParser
+import fi.hsl.transitdata.eke_sink.messages.rmm_painerajavirhe12.RmmPaineRajaVirhe12
+import fi.hsl.transitdata.eke_sink.messages.rmm_time_changed_data.RmmTimeChangedDataParser
+import fi.hsl.transitdata.eke_sink.messages.stadlerUDP.TRAIN_NUMBER
 import mu.KotlinLogging
 import org.apache.commons.csv.CSVFormat
 import org.apache.commons.csv.CSVPrinter
@@ -17,42 +26,51 @@ import org.apache.pulsar.client.api.MessageId
 import org.apache.pulsar.client.api.Producer
 import java.io.File
 import java.text.SimpleDateFormat
-import java.util.*
 
-import java.io.BufferedWriter
 import java.io.FileWriter
-import java.nio.file.Files
-import java.nio.file.StandardOpenOption
 
 const val TOPIC_PREFIX = "eke/v1/sm5/"
 
 class MessageHandler(val context: PulsarApplicationContext, private val path : File, private val outputFormat : String) : IMessageHandler {
 
     private val log = KotlinLogging.logger {}
-    private val JSON_FILE_NAME_PATTERN = "day_%s_unit_%s.json"
-    private val CSV_FILE_NAME_PATTERN = "day_%s_unit_%s.csv"
     private val consumer: Consumer<ByteArray> = context.consumer!!
     private val sdfDayHour : SimpleDateFormat = SimpleDateFormat("dd-MM-yyyy-HH")
     private var lastHandledMessage : MessageId? = null
     private var handledMessages = 0
     private val producer : Producer<ByteArray> = context.singleProducer!!
+    private val parsers : Map<String, Parser>  = mapOf(
+        "idStruct" to IdStructParser,
+        "rmmIoStruct" to RmmIoStructParser,
+        "rmmJkvStruct" to RmmJkvStructParser,
+        "rmmJkvBeacon" to RmmJkvBeaconParser,
+        "rmmJkvTrainMsg" to RmmJkvTrainMsgParser,
+        "rmmTimeChangedData" to RmmTimeChangedDataParser,
+        "stadlerUDP" to StadlerUDPParser,
+        "rmmPaineRajaVirhe12" to RmmPaineRajaVirhe12
+    )
+
 
     override fun handleMessage(received: Message<Any>) {
         try {
             val data: ByteArray = received.data
             val raw = Mqtt.RawMessage.parseFrom(data)
             val rawPayload = raw.payload.toByteArray()
-            if(rawPayload.size != MESSAGE_SIZE){
-                //Ignore
-                //log.warn("Message is ${rawPayload.size} bytes long, expecting $MESSAGE_SIZE, ignoring")
+            var messageIsValid : Boolean = true
+            val messageType = raw.topic.split("/")[raw.topic.split("/").size - 1]
+            val parser = parsers[messageType]
+            if(parser != null){
+                when(outputFormat) {
+                    "csv" -> writeToCSVFile(rawPayload, raw.topic, parser)
+                    "json" -> writeToJsonFile(rawPayload, raw.topic)
+                }
             }
             else{
-                if(outputFormat == "csv"){
-                    writeToCSVFile(rawPayload, raw.topic)
-                }
-                else{
-                    writeToJsonFile(rawPayload, raw.topic)
-                }
+                log.error("unknown topic ${raw.topic.split("/")}, ignoring")
+                messageIsValid = false
+            }
+
+            if(messageIsValid && messageType == "stadlerUDP"){
                 val messageSummary = Eke.EkeSummary.newBuilder()
                     .setEkeDate(rawPayload.readField(EKE_TIME).toInstant().toEpochMilli())
                     .setTrainNumber(rawPayload.readField(TRAIN_NUMBER))
@@ -95,25 +113,26 @@ class MessageHandler(val context: PulsarApplicationContext, private val path : F
 
 
 
-    private fun writeToCSVFile(payload: ByteArray, topic : String){
+    private fun writeToCSVFile(payload: ByteArray, topic : String, parser : Parser){
         val date = payload.readField(EKE_TIME)
-        val file = File(path, String.format(CSV_FILE_NAME_PATTERN, sdfDayHour.format(date), getUnitNumber(topic)))
+        val messageType = topic.split("/")[topic.split("/").size - 1]
+        val file = File(path, String.format(CSV_FILE_NAME_PATTERN, messageType, sdfDayHour.format(date), getUnitNumber(topic)))
         val csvPrinter = if(file.exists()){
             CSVPrinter(FileWriter(file, true), CSVFormat.DEFAULT.withDelimiter(";".single()))
         }
         else{
-            CSVPrinter(FileWriter(file, false), CSVFormat.DEFAULT.withDelimiter(";".single()).withHeader(*EkeBinaryParser.fields.map {it.jsonFieldName }.toTypedArray(), "topic"))
+            CSVPrinter(FileWriter(file, false), CSVFormat.DEFAULT.withDelimiter(";".single()).withHeader(*parser.fields.map {it.fieldName }.toTypedArray()))
         }
         csvPrinter.use {
-            csvPrinter.printRecord(*EkeBinaryParser.fields.map {it.toString(payload) }.toTypedArray(), topic)
+            csvPrinter.printRecord(*parser.getFieldValues(payload))
             csvPrinter.flush()
         }
     }
 
     private fun writeToJsonFile(payload: ByteArray, topic : String){
         val date = payload.readField(EKE_TIME)
-        val apcJson = EkeBinaryParser.toJson(payload, topic)
-        val file = File(path, String.format(JSON_FILE_NAME_PATTERN, sdfDayHour.format(date), getUnitNumber(topic)))
+        val apcJson = StadlerUDPParser.toJson(payload, topic)
+        val file = File(path, String.format(JSON_FILE_NAME_PATTERN, topic, sdfDayHour.format(date), getUnitNumber(topic)))
         if(!file.exists()) file.createNewFile()
         file.appendText("${apcJson}\n")
     }
