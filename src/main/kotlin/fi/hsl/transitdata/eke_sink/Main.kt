@@ -56,7 +56,7 @@ private fun setupTaskToMoveFiles(blobConnectionString : String, blobContainer : 
             val allFiles = PATH.list()!!
             //List of the unit number of all the vehicles which have a file
             allFiles
-                .filter { it -> !LocalDateTime.parse(it.split("_unit_")[0].replace("day_",""), sdfDayHour).isAfter(boundaryForPastData.toLocalDateTime())}                .forEach{
+                .filter { it -> !LocalDateTime.parse(it.split("_unit_")[0].split("_day_")[1], sdfDayHour).isAfter(boundaryForPastData.toLocalDateTime())}.forEach{
                     //Files to zip for vehicle
                     val split = it.split("_unit_")
                     val zipFile = zipFiles(PATH, String.format(ZIP_FILE_PATTERN, split[0], split[1]), listOf(it))
