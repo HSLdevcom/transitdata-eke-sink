@@ -11,7 +11,8 @@ repositories {
     mavenCentral()
     jcenter()
     maven{
-        url "https://maven.pkg.github.com/HSLdevcom"
+        name = 'GitHub transitdata-common'
+        url 'https://maven.pkg.github.com/HSLdevcom/transitdata-common'
         credentials {
             username = System.getenv("GITHUB_ACTOR")
             password = System.getenv("GITHUB_TOKEN")
