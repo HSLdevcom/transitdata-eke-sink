@@ -5,7 +5,6 @@ import fi.hsl.common.pulsar.PulsarApplication
 import fi.hsl.transitdata.eke_sink.azure.AzureBlobClient
 import fi.hsl.transitdata.eke_sink.azure.AzureUploader
 import mu.KotlinLogging
-import okhttp3.OkHttpClient
 import java.io.File
 import java.time.Duration
 import java.time.LocalDateTime
@@ -19,11 +18,8 @@ import java.time.format.DateTimeFormatter
 private val PATH = File("eke")
 private val log = KotlinLogging.logger {}
 fun main(vararg args: String) {
-
-
     val config = ConfigParser.createConfig()
 
-    val client = OkHttpClient()
     if(!PATH.exists()) PATH.mkdir()
     try {
         PulsarApplication.newInstance(config).use { app ->
