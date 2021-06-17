@@ -90,8 +90,10 @@ class MessageHandler(val context: PulsarApplicationContext, private val path : F
     }
 
     fun ackMessages() {
-        if(lastHandledMessage != null){
-            consumer.acknowledgeAsync(lastHandledMessage)
+        if (lastHandledMessage != null){
+            //Acknowledge all messages up to and including last received
+            //TODO: should we acknowledge messages individually?
+            consumer.acknowledgeCumulativeAsync(lastHandledMessage)
                 .exceptionally { throwable ->
                     log.error("Failed to ack Pulsar messages", throwable)
                     null
