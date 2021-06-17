@@ -6,7 +6,7 @@ import java.io.FileOutputStream
 import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
 
-public fun zipFiles(path : File, fileName : String, filesToZip : List<String>) : File {
+public fun zipFiles(path: File, fileName: String, filesToZip: List<String>) : File {
     val zipFile = File(path, fileName)
     val fos = FileOutputStream(zipFile)
     fos.use {
