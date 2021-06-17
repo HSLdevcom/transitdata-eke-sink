@@ -28,10 +28,11 @@ import java.io.File
 import java.text.SimpleDateFormat
 
 import java.io.FileWriter
+import java.nio.file.Path
 
 const val TOPIC_PREFIX = "eke/v1/sm5/"
 
-class MessageHandler(context: PulsarApplicationContext, private val path: File, private val outputFormat: String) : IMessageHandler {
+class MessageHandler(context: PulsarApplicationContext, private val fileDirectory: Path, private val outputFormat: String) : IMessageHandler {
     private val log = KotlinLogging.logger {}
 
     private val consumer: Consumer<ByteArray> = context.consumer!!
@@ -115,11 +116,11 @@ class MessageHandler(context: PulsarApplicationContext, private val path: File, 
         return topic.replace(TOPIC_PREFIX,"").split("/")[0]
     }
 
-    private fun writeToCSVFile(payload: ByteArray, topic : String, parser : Parser){
+    private fun writeToCSVFile(payload: ByteArray, topic : String, parser : Parser)  {
         val date = payload.readField(EKE_TIME)
         val messageType = topic.split("/")[topic.split("/").size - 1]
 
-        val file = File(path, String.format(CSV_FILE_NAME_PATTERN, messageType, sdfDayHour.format(date), getUnitNumber(topic)))
+        val file = fileDirectory.resolve(String.format(CSV_FILE_NAME_PATTERN, messageType, sdfDayHour.format(date), getUnitNumber(topic))).toFile()
 
         val csvPrinter = if (file.exists()) {
             CSVPrinter(FileWriter(file, true), CSVFormat.DEFAULT.withDelimiter(';'))
@@ -135,7 +136,7 @@ class MessageHandler(context: PulsarApplicationContext, private val path: File, 
     private fun writeToJsonFile(payload: ByteArray, topic : String){
         val date = payload.readField(EKE_TIME)
         val apcJson = StadlerUDPParser.toJson(payload, topic)
-        val file = File(path, String.format(JSON_FILE_NAME_PATTERN, topic, sdfDayHour.format(date), getUnitNumber(topic)))
+        val file = fileDirectory.resolve(String.format(JSON_FILE_NAME_PATTERN, topic, sdfDayHour.format(date), getUnitNumber(topic))).toFile()
         if(!file.exists()) file.createNewFile()
         file.appendText("${apcJson}\n")
     }

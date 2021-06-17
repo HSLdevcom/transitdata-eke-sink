@@ -51,7 +51,7 @@ class MessageHandlerTest {
     fun handleMessageTest(){
         val directory : File = File("eke")
         if(!directory.exists()) directory.mkdir()
-        val handler = MessageHandler(mockContext, directory, "csv")
+        val handler = MessageHandler(mockContext, directory.toPath(), "csv")
         handler.handleMessage(createFirstMqttMessage())
         handler.ackMessages()
         Mockito.verify(mockConsumer, Mockito.times(1)).acknowledgeAsync(any<MessageId>())
@@ -70,7 +70,7 @@ class MessageHandlerTest {
     fun handleMessagesTest(){
         val directory : File = File("eke")
         if(!directory.exists()) directory.mkdir()
-        val handler = MessageHandler(mockContext, directory, "csv")
+        val handler = MessageHandler(mockContext, directory.toPath(), "csv")
         getInputStreamFromTestFile().use { inputStream ->
             while(inputStream.available() > 0){
                 val message = createMqttMessage(inputStream, "eke/v1/sm5/7777/stadlerUDP")
