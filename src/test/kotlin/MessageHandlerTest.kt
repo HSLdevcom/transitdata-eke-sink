@@ -1,9 +1,7 @@
 import com.nhaarman.mockitokotlin2.any
 import com.nhaarman.mockitokotlin2.doReturn
 import com.nhaarman.mockitokotlin2.mock
-import com.nhaarman.mockitokotlin2.withSettings
 import fi.hsl.common.pulsar.PulsarApplicationContext
-import fi.hsl.transitdata.eke_sink.messages.stadlerUDP.EkeMessageDbWriter
 import fi.hsl.transitdata.eke_sink.MessageHandler
 import org.apache.pulsar.client.api.Consumer
 import org.apache.pulsar.client.api.MessageId
@@ -23,7 +21,6 @@ class MessageHandlerTest {
     lateinit var mockContext: PulsarApplicationContext
     lateinit var mockConsumer: Consumer<ByteArray>
     lateinit var mockProducer: Producer<ByteArray>
-    lateinit var mockDbWriter : EkeMessageDbWriter
     lateinit var mockMessage : TypedMessageBuilder<ByteArray>
 
     @Before
@@ -43,15 +40,13 @@ class MessageHandlerTest {
             on{consumer} doReturn (mockConsumer)
             on{singleProducer} doReturn (mockProducer)
         }
-        mockDbWriter = mock {
-        }
     }
 
     @Test
     fun handleMessageTest(){
         val directory : File = File("eke")
         if(!directory.exists()) directory.mkdir()
-        val handler = MessageHandler(mockContext, directory, "csv")
+        val handler = MessageHandler(mockContext, directory.toPath(), "csv")
         handler.handleMessage(createFirstMqttMessage())
         handler.ackMessages()
         Mockito.verify(mockConsumer, Mockito.times(1)).acknowledgeAsync(any<MessageId>())
@@ -70,7 +65,7 @@ class MessageHandlerTest {
     fun handleMessagesTest(){
         val directory : File = File("eke")
         if(!directory.exists()) directory.mkdir()
-        val handler = MessageHandler(mockContext, directory, "csv")
+        val handler = MessageHandler(mockContext, directory.toPath(), "csv")
         getInputStreamFromTestFile().use { inputStream ->
             while(inputStream.available() > 0){
                 val message = createMqttMessage(inputStream, "eke/v1/sm5/7777/stadlerUDP")

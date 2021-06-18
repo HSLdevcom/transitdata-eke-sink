@@ -5,8 +5,9 @@ import fi.hsl.common.pulsar.PulsarApplication
 import fi.hsl.transitdata.eke_sink.azure.AzureBlobClient
 import fi.hsl.transitdata.eke_sink.azure.AzureUploader
 import mu.KotlinLogging
-import okhttp3.OkHttpClient
 import java.io.File
+import java.nio.file.Files
+import java.nio.file.Paths
 import java.time.Duration
 import java.time.LocalDateTime
 import java.time.ZoneId
@@ -16,21 +17,25 @@ import java.util.concurrent.TimeUnit
 import java.time.format.DateTimeFormatter
 
 
-private val PATH = File("eke")
+private val PATH = Paths.get("eke")
 private val log = KotlinLogging.logger {}
+
 fun main(vararg args: String) {
-
-
     val config = ConfigParser.createConfig()
 
-    val client = OkHttpClient()
-    if(!PATH.exists()) PATH.mkdir()
+    if(!Files.exists(PATH)) Files.createDirectories(PATH)
+
     try {
         PulsarApplication.newInstance(config).use { app ->
-           val context = app.context
-           val messageHandler = MessageHandler(context, PATH, context.config!!.getString("application.outputformat"))
-            setupTaskToMoveFiles(context.config!!.getString("application.blobConnectionString"),
-                context.config!!.getString("application.blobContainer"), messageHandler)
+            val context = app.context
+
+            val messageHandler = MessageHandler(context, PATH, config.getString("application.outputformat"))
+
+            setupTaskToMoveFiles(
+                config.getString("application.blobConnectionString"),
+                config.getString("application.blobContainer"),
+                messageHandler)
+
             app.launchWithHandler(messageHandler)
         }
     } catch (e: Exception) {
@@ -38,8 +43,7 @@ fun main(vararg args: String) {
     }
 }
 
-val ZIP_FILE_PATTERN = "%s_vehicle_%s.zip"
-val sdfDayHour  = DateTimeFormatter.ofPattern ("dd-MM-yyyy-HH")
+val sdfDayHour: DateTimeFormatter = DateTimeFormatter.ofPattern ("dd-MM-yyyy-HH")
 /**
  * Moves the files from the local storage to a shared azure blob
  */
@@ -48,29 +52,35 @@ private fun setupTaskToMoveFiles(blobConnectionString : String, blobContainer : 
     val nextHour = LocalDateTime.now().plusHours(1).withMinute(5).atZone(ZoneId.of("Europe/Helsinki"))
     val now = LocalDateTime.now()
     val initialDelay = Duration.between(now, nextHour)
-    scheduler.scheduleWithFixedDelay(Runnable {
-        try{
+    scheduler.scheduleWithFixedDelay({
+        try {
             val boundaryForPastData = LocalDateTime.now().minusHours(1).withMinute(0).atZone(ZoneId.of("Europe/Helsinki"))
-            log.info("Starting to move files to blob")
+            log.info("Starting to upload files to Blob Storage")
             //Collect trains
-            val allFiles = PATH.list()!!
+            val allFiles = Files.list(PATH)!!
             //List of the unit number of all the vehicles which have a file
             allFiles
-                .filter { it -> !LocalDateTime.parse(it.split("_unit_")[0].split("_day_")[1], sdfDayHour).isAfter(boundaryForPastData.toLocalDateTime())}.forEach{
-                    //Files to zip for vehicle
-                    val split = it.split("_unit_")
-                    val zipFile = zipFiles(PATH, String.format(ZIP_FILE_PATTERN, split[0], split[1]), listOf(it))
+                .filter {
+                    !LocalDateTime.parse(it.fileName.toString().split("_unit_")[0].split("_day_")[1], sdfDayHour).isAfter(boundaryForPastData.toLocalDateTime())
+                }
+                .forEach { uncompressed ->
+                    //GZIP file and upload to Azure Blob Storage
+                    log.debug { "Compressing $uncompressed with GZIP" }
+                    val compressed = gzip(uncompressed)
+                    log.debug { "Compressed $uncompressed to $compressed" }
+
                     val azureBlobClient = AzureBlobClient(blobConnectionString, blobContainer)
                     val uploader = AzureUploader(azureBlobClient)
-                    uploader.uploadBlob(zipFile)
-                    File(PATH, it).delete()
-                    zipFile.delete()
+                    uploader.uploadBlob(compressed.toFile())
+
+                    //Delete files that have been uploaded to Azure
+                    Files.delete(uncompressed)
+                    Files.delete(compressed)
                 }
-            log.info("Done to move files to blob")
+            log.info("Done to uploading files to blob")
             messageHandler.ackMessages()
             log.info("Pulsar messages acknowledged")
-        }
-        catch(t : Throwable){
+        } catch(t : Throwable) {
             log.error("Something went wrong while moving the files to blob", t)
         }
     }, initialDelay.toMinutes() ,60, TimeUnit.MINUTES)

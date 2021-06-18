@@ -28,12 +28,13 @@ import java.io.File
 import java.text.SimpleDateFormat
 
 import java.io.FileWriter
+import java.nio.file.Path
 
 const val TOPIC_PREFIX = "eke/v1/sm5/"
 
-class MessageHandler(val context: PulsarApplicationContext, private val path : File, private val outputFormat : String) : IMessageHandler {
-
+class MessageHandler(context: PulsarApplicationContext, private val fileDirectory: Path, private val outputFormat: String) : IMessageHandler {
     private val log = KotlinLogging.logger {}
+
     private val consumer: Consumer<ByteArray> = context.consumer!!
     private val sdfDayHour : SimpleDateFormat = SimpleDateFormat("dd-MM-yyyy-HH")
     private var lastHandledMessage : MessageId? = null
@@ -56,16 +57,17 @@ class MessageHandler(val context: PulsarApplicationContext, private val path : F
             val data: ByteArray = received.data
             val raw = Mqtt.RawMessage.parseFrom(data)
             val rawPayload = raw.payload.toByteArray()
-            var messageIsValid : Boolean = true
+
+            var messageIsValid = true
+
             val messageType = raw.topic.split("/")[raw.topic.split("/").size - 1]
             val parser = parsers[messageType]
-            if(parser != null){
+            if (parser != null) {
                 when(outputFormat) {
                     "csv" -> writeToCSVFile(rawPayload, raw.topic, parser)
                     "json" -> writeToJsonFile(rawPayload, raw.topic)
                 }
-            }
-            else{
+            } else {
                 log.error("unknown topic ${raw.topic.split("/")}, ignoring")
                 messageIsValid = false
             }
@@ -78,6 +80,7 @@ class MessageHandler(val context: PulsarApplicationContext, private val path : F
                     .build()
                 sendMessageSummary(messageSummary)
             }
+
             handledMessages++
             if(handledMessages == 100000){
                 log.info("Handled 100000 messages, everything seems fine")
@@ -90,8 +93,10 @@ class MessageHandler(val context: PulsarApplicationContext, private val path : F
     }
 
     fun ackMessages() {
-        if(lastHandledMessage != null){
-            consumer.acknowledgeAsync(lastHandledMessage)
+        if (lastHandledMessage != null){
+            //Acknowledge all messages up to and including last received
+            //TODO: should we acknowledge messages individually?
+            consumer.acknowledgeCumulativeAsync(lastHandledMessage)
                 .exceptionally { throwable ->
                     log.error("Failed to ack Pulsar messages", throwable)
                     null
@@ -100,7 +105,7 @@ class MessageHandler(val context: PulsarApplicationContext, private val path : F
         }
     }
 
-    fun sendMessageSummary(messageSummary : Eke.EkeSummary){
+    private fun sendMessageSummary(messageSummary : Eke.EkeSummary){
         producer.newMessage()
             .property(TransitdataProperties.KEY_PROTOBUF_SCHEMA, TransitdataProperties.ProtobufSchema.EkeSummary.toString())
             .value(messageSummary.toByteArray())
@@ -111,17 +116,16 @@ class MessageHandler(val context: PulsarApplicationContext, private val path : F
         return topic.replace(TOPIC_PREFIX,"").split("/")[0]
     }
 
-
-
-    private fun writeToCSVFile(payload: ByteArray, topic : String, parser : Parser){
+    private fun writeToCSVFile(payload: ByteArray, topic : String, parser : Parser)  {
         val date = payload.readField(EKE_TIME)
         val messageType = topic.split("/")[topic.split("/").size - 1]
-        val file = File(path, String.format(CSV_FILE_NAME_PATTERN, messageType, sdfDayHour.format(date), getUnitNumber(topic)))
-        val csvPrinter = if(file.exists()){
-            CSVPrinter(FileWriter(file, true), CSVFormat.DEFAULT.withDelimiter(";".single()))
-        }
-        else{
-            CSVPrinter(FileWriter(file, false), CSVFormat.DEFAULT.withDelimiter(";".single()).withHeader(*parser.fields.map {it.fieldName }.toTypedArray()))
+
+        val file = fileDirectory.resolve(String.format(CSV_FILE_NAME_PATTERN, messageType, sdfDayHour.format(date), getUnitNumber(topic))).toFile()
+
+        val csvPrinter = if (file.exists()) {
+            CSVPrinter(FileWriter(file, true), CSVFormat.DEFAULT.withDelimiter(';'))
+        } else {
+            CSVPrinter(FileWriter(file, false), CSVFormat.DEFAULT.withDelimiter(';').withHeader(*parser.fields.map { it.fieldName }.toTypedArray()))
         }
         csvPrinter.use {
             csvPrinter.printRecord(*parser.getFieldValues(payload))
@@ -132,7 +136,7 @@ class MessageHandler(val context: PulsarApplicationContext, private val path : F
     private fun writeToJsonFile(payload: ByteArray, topic : String){
         val date = payload.readField(EKE_TIME)
         val apcJson = StadlerUDPParser.toJson(payload, topic)
-        val file = File(path, String.format(JSON_FILE_NAME_PATTERN, topic, sdfDayHour.format(date), getUnitNumber(topic)))
+        val file = fileDirectory.resolve(String.format(JSON_FILE_NAME_PATTERN, topic, sdfDayHour.format(date), getUnitNumber(topic))).toFile()
         if(!file.exists()) file.createNewFile()
         file.appendText("${apcJson}\n")
     }
