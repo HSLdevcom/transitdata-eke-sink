@@ -1,6 +1,5 @@
 package fi.hsl.transitdata.eke_sink.messages.rmm_jkv_beacon
 
-import fi.hsl.transitdata.eke_sink.JSON_FILE_NAME_PATTERN
 import fi.hsl.transitdata.eke_sink.converters.FieldDefinition
 import fi.hsl.transitdata.eke_sink.converters.TO_BYTE_ARRAY
 import fi.hsl.transitdata.eke_sink.converters.TO_INT

@@ -5,33 +5,36 @@ import fi.hsl.common.pulsar.PulsarApplication
 import fi.hsl.transitdata.eke_sink.azure.AzureBlobClient
 import fi.hsl.transitdata.eke_sink.azure.AzureUploader
 import mu.KotlinLogging
-import java.io.File
 import java.nio.file.Files
+import java.nio.file.Path
 import java.nio.file.Paths
 import java.time.Duration
+import java.time.Instant
 import java.time.LocalDateTime
-import java.time.ZoneId
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 
-import java.time.format.DateTimeFormatter
+import java.time.temporal.ChronoUnit
 
-
-private val PATH = Paths.get("eke")
 private val log = KotlinLogging.logger {}
+
 
 fun main(vararg args: String) {
     val config = ConfigParser.createConfig()
 
-    if(!Files.exists(PATH)) Files.createDirectories(PATH)
+    val dataDirectory = Paths.get("eke")
+    if(!Files.exists(dataDirectory)) {
+        Files.createDirectories(dataDirectory)
+    }
 
     try {
         PulsarApplication.newInstance(config).use { app ->
             val context = app.context
 
-            val messageHandler = MessageHandler(context, PATH, config.getString("application.outputformat"))
+            val messageHandler = MessageHandler(context, dataDirectory)
 
             setupTaskToMoveFiles(
+                dataDirectory,
                 config.getString("application.blobConnectionString"),
                 config.getString("application.blobContainer"),
                 messageHandler)
@@ -43,26 +46,31 @@ fun main(vararg args: String) {
     }
 }
 
-val sdfDayHour: DateTimeFormatter = DateTimeFormatter.ofPattern ("dd-MM-yyyy-HH")
 /**
  * Moves the files from the local storage to a shared azure blob
  */
-private fun setupTaskToMoveFiles(blobConnectionString : String, blobContainer : String, messageHandler: MessageHandler){
-    val scheduler = Executors.newScheduledThreadPool(1)
-    val nextHour = LocalDateTime.now().plusHours(1).withMinute(5).atZone(ZoneId.of("Europe/Helsinki"))
-    val now = LocalDateTime.now()
-    val initialDelay = Duration.between(now, nextHour)
+private fun setupTaskToMoveFiles(dataDirectory: Path, blobConnectionString : String, blobContainer : String, messageHandler: MessageHandler){
+    val scheduler = Executors.newSingleThreadScheduledExecutor { runnable ->
+        val thread = Thread(runnable)
+        thread.isDaemon = true
+        return@newSingleThreadScheduledExecutor thread
+    }
+
+    val nextHour = LocalDateTime.now().plusHours(1).withMinute(45)
+    val initialDelay = Duration.between(LocalDateTime.now(), nextHour)
+
     scheduler.scheduleWithFixedDelay({
         try {
-            val boundaryForPastData = LocalDateTime.now().minusHours(1).withMinute(0).atZone(ZoneId.of("Europe/Helsinki"))
             log.info("Starting to upload files to Blob Storage")
+
+            val now = Instant.now()
             //Collect trains
-            val allFiles = Files.list(PATH)!!
+            val allFiles = Files.list(dataDirectory)!!
             //List of the unit number of all the vehicles which have a file
             allFiles
-                .filter {
-                    !LocalDateTime.parse(it.fileName.toString().split("_unit_")[0].split("_day_")[1], sdfDayHour).isAfter(boundaryForPastData.toLocalDateTime())
-                }
+                //Upload files that have not been modified for 90 minutes (i.e. no new data is coming in)
+                //TODO: can this cause issues in some cases?
+                .filter { Files.getLastModifiedTime(it).toInstant().plus(90, ChronoUnit.MINUTES).isBefore(now) }
                 .forEach { uncompressed ->
                     //GZIP file and upload to Azure Blob Storage
                     log.debug { "Compressing $uncompressed with GZIP" }
@@ -77,6 +85,7 @@ private fun setupTaskToMoveFiles(blobConnectionString : String, blobContainer : 
                     Files.delete(uncompressed)
                     Files.delete(compressed)
                 }
+
             log.info("Done to uploading files to blob")
             messageHandler.ackMessages()
             log.info("Pulsar messages acknowledged")

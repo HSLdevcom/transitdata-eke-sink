@@ -26,33 +26,35 @@ class MessageHandlerTest {
     @Before
     fun before(){
         mockConsumer = mock<Consumer<ByteArray>>{
-            on{acknowledgeAsync(any<MessageId>())} doReturn (CompletableFuture<Void>())
+            on{ acknowledgeAsync(any<MessageId>()) } doReturn (CompletableFuture<Void>())
+            on { acknowledgeCumulativeAsync(any<MessageId>()) } doReturn(CompletableFuture())
         }
         mockMessage = mock<TypedMessageBuilder<ByteArray>>(stubOnly = true){
-            on{sendAsync()} doReturn (CompletableFuture<MessageId>())
-            on{property(any<String>(), any<String>())} doReturn (it)
-            on{value(any<ByteArray>())} doReturn(it)
+            on{ sendAsync() } doReturn (CompletableFuture<MessageId>())
+            on{ property(any<String>(), any<String>()) } doReturn (it)
+            on{ value(any<ByteArray>()) } doReturn(it)
         }
         mockProducer = mock<Producer<ByteArray>>{
-            on{newMessage()} doReturn(mockMessage)
+            on{ newMessage() } doReturn(mockMessage)
         }
         mockContext = mock<PulsarApplicationContext>{
-            on{consumer} doReturn (mockConsumer)
-            on{singleProducer} doReturn (mockProducer)
+            on{ consumer } doReturn (mockConsumer)
+            on{ singleProducer } doReturn (mockProducer)
         }
     }
 
     @Test
     fun handleMessageTest(){
-        val directory : File = File("eke")
+        val directory = File("eke")
         if(!directory.exists()) directory.mkdir()
-        val handler = MessageHandler(mockContext, directory.toPath(), "csv")
+
+        val handler = MessageHandler(mockContext, directory.toPath())
         handler.handleMessage(createFirstMqttMessage())
         handler.ackMessages()
-        Mockito.verify(mockConsumer, Mockito.times(1)).acknowledgeAsync(any<MessageId>())
-        val file = File(directory, "topic_stadlerUDP_day_01-01-1970-00_unit_7777.csv")
+        Mockito.verify(mockConsumer, Mockito.times(1)).acknowledgeCumulativeAsync(any<MessageId>())
+        val file = File(directory, "1970-01-01T00_stadlerUDP_vehicle_7777.csv")
         assertTrue(file.exists())
-        File(directory, "topic_stadlerUDP_day_01-01-1970-00_unit_7777.csv").inputStream().use {
+        File(directory, "1970-01-01T00_stadlerUDP_vehicle_7777.csv").inputStream().use {
             inputStream ->
             val string = Scanner(inputStream, StandardCharsets.UTF_8.name()).useDelimiter("\\A").next()
             //Do some test
@@ -63,9 +65,10 @@ class MessageHandlerTest {
 
     @Test
     fun handleMessagesTest(){
-        val directory : File = File("eke")
+        val directory = File("eke")
         if(!directory.exists()) directory.mkdir()
-        val handler = MessageHandler(mockContext, directory.toPath(), "csv")
+
+        val handler = MessageHandler(mockContext, directory.toPath())
         getInputStreamFromTestFile().use { inputStream ->
             while(inputStream.available() > 0){
                 val message = createMqttMessage(inputStream, "eke/v1/sm5/7777/stadlerUDP")
@@ -73,9 +76,9 @@ class MessageHandlerTest {
             }
         }
         handler.ackMessages()
-        Mockito.verify(mockConsumer, Mockito.times(1)).acknowledgeAsync(any<MessageId>())
+        Mockito.verify(mockConsumer, Mockito.times(1)).acknowledgeCumulativeAsync(any<MessageId>())
 
-        val file = File(directory, "topic_stadlerUDP_day_01-01-1970-00_unit_7777.csv")
+        val file = File(directory, "1970-01-01T00_stadlerUDP_vehicle_7777.csv")
         assertTrue(file.exists())
         file.delete()
         directory.delete()
