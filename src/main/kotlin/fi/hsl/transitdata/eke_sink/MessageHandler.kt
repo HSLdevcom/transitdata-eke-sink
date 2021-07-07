@@ -90,6 +90,8 @@ class MessageHandler(context: PulsarApplicationContext, fileDirectory: Path) : I
     private fun writeToCSVFile(payload: ByteArray, topic: String, mqttReceivedTimestamp: Instant?)  {
         if (topic.endsWith("connectionStatus")) {
             //TODO: handle connection status messages
+            log.info { "Received connectionStatus message (topic: ${topic}, payload: ${payload.toString(Charsets.UTF_8)})" }
+
             return
         }
 
