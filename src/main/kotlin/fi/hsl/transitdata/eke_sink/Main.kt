@@ -3,7 +3,10 @@ package fi.hsl.transitdata.eke_sink
 import fi.hsl.common.config.ConfigParser
 import fi.hsl.common.pulsar.PulsarApplication
 import fi.hsl.transitdata.eke_sink.azure.AzureBlobClient
-import fi.hsl.transitdata.eke_sink.azure.AzureUploader
+import fi.hsl.transitdata.eke_sink.sink.AzureSink
+import fi.hsl.transitdata.eke_sink.sink.LocalSink
+import fi.hsl.transitdata.eke_sink.sink.Sink
+import fi.hsl.transitdata.eke_sink.utils.DaemonThreadFactory
 import mu.KotlinLogging
 import java.nio.file.Files
 import java.nio.file.Path
@@ -15,15 +18,19 @@ import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 
 import java.time.temporal.ChronoUnit
+import kotlin.io.path.absolutePathString
+import kotlin.time.DurationUnit
+import kotlin.time.ExperimentalTime
+import kotlin.time.toDuration
 
 private val log = KotlinLogging.logger {}
 
-
+@ExperimentalTime
 fun main(vararg args: String) {
     val config = ConfigParser.createConfig()
 
     val dataDirectory = Paths.get("eke")
-    if(!Files.exists(dataDirectory)) {
+    if (!Files.exists(dataDirectory)) {
         Files.createDirectories(dataDirectory)
     }
 
@@ -33,10 +40,20 @@ fun main(vararg args: String) {
 
             val messageHandler = MessageHandler(context, dataDirectory)
 
+            val sinkType = config.getString("application.sink")
+            val sink = if (sinkType == "local") {
+                val sinkDirectory = Files.createTempDirectory("eke")
+                log.info { "Using local sink for copying files to local filesystem (${sinkDirectory.toAbsolutePath()})" }
+                //TODO: these parameters could be configurable
+                LocalSink(sinkDirectory, 50.toDuration(DurationUnit.MILLISECONDS), 50)
+            } else {
+                log.info { "Using Azure sink for uploading files to Blob Storage" }
+                AzureSink(AzureBlobClient(config.getString("application.blobConnectionString"), config.getString("application.blobContainer")))
+            }
+
             setupTaskToMoveFiles(
                 dataDirectory,
-                config.getString("application.blobConnectionString"),
-                config.getString("application.blobContainer"),
+                sink,
                 messageHandler)
 
             app.launchWithHandler(messageHandler)
@@ -49,7 +66,7 @@ fun main(vararg args: String) {
 /**
  * Moves the files from the local storage to a shared azure blob
  */
-private fun setupTaskToMoveFiles(dataDirectory: Path, blobConnectionString : String, blobContainer : String, messageHandler: MessageHandler){
+private fun setupTaskToMoveFiles(dataDirectory: Path, sink: Sink, messageHandler: MessageHandler){
     val scheduler = Executors.newSingleThreadScheduledExecutor { runnable ->
         val thread = Thread(runnable)
         thread.isDaemon = true
@@ -77,9 +94,7 @@ private fun setupTaskToMoveFiles(dataDirectory: Path, blobConnectionString : Str
                     val compressed = gzip(uncompressed)
                     log.debug { "Compressed $uncompressed to $compressed" }
 
-                    val azureBlobClient = AzureBlobClient(blobConnectionString, blobContainer)
-                    val uploader = AzureUploader(azureBlobClient)
-                    uploader.uploadBlob(compressed.toFile())
+                    sink.upload(compressed)
 
                     //Delete files that have been uploaded to Azure
                     Files.delete(uncompressed)
