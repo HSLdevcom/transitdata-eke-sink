@@ -38,10 +38,10 @@ data class MqttHeader(
             val version = bytesToInt(fixSize(header.get(5, 15).toByteArray()))
             val ntpValid = header.get(15)
 
-            val ekeTime = bytesToInt((header.get(16, 48).toByteArray()))
+            val ekeTime = bytesToInt(fixSize((header.get(16, 48)).toByteArray()))
             val ekeTimeHundredsOfSecond = bytesToInt((fixSize(header.get(48, 56).toByteArray())))
 
-            val ntpTime = bytesToInt((header.get(56, 88).toByteArray()))
+            val ntpTime = bytesToInt(fixSize(header.get(56, 88).toByteArray()))
             val ntpTimeHundredsOfSecond = bytesToInt((fixSize(header.get(88, 96).toByteArray())))
 
             return MqttHeader(messageType, version, ntpValid, ekeTime, ekeTimeHundredsOfSecond, ntpTime, ntpTimeHundredsOfSecond)
