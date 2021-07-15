@@ -6,7 +6,6 @@ import fi.hsl.transitdata.eke_sink.azure.AzureBlobClient
 import fi.hsl.transitdata.eke_sink.sink.AzureSink
 import fi.hsl.transitdata.eke_sink.sink.LocalSink
 import fi.hsl.transitdata.eke_sink.sink.Sink
-import fi.hsl.transitdata.eke_sink.utils.DaemonThreadFactory
 import mu.KotlinLogging
 import java.nio.file.Files
 import java.nio.file.Path
