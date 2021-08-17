@@ -5,6 +5,7 @@ import fi.hsl.common.pulsar.IMessageHandler
 import fi.hsl.common.pulsar.PulsarApplicationContext
 import fi.hsl.common.transitdata.TransitdataProperties
 import fi.hsl.common.transitdata.proto.Eke
+import fi.hsl.transitdata.eke_sink.messages.ConnectionStatus
 import fi.hsl.transitdata.eke_sink.messages.MqttHeader
 import mu.KotlinLogging
 import org.apache.commons.codec.binary.Hex
@@ -88,26 +89,50 @@ class MessageHandler(context: PulsarApplicationContext, fileDirectory: Path) : I
     }
 
     private fun writeToCSVFile(payload: ByteArray, topic: String, mqttReceivedTimestamp: Instant?)  {
-        if (topic.endsWith("connectionStatus")) {
-            //TODO: handle connection status messages
-            log.info { "Received connectionStatus message (topic: ${topic}, payload: ${payload.toString(Charsets.UTF_8)})" }
+        val mqttTime = mqttReceivedTimestamp?.atZone(ZoneId.of("UTC"))
 
+        if (mqttTime == null) {
+            log.warn { "No MQTT received timestamp, cannot store message" }
             return
         }
 
-        val mqttHeader = MqttHeader.parseFromByteArray(payload)
-
-        val messageType = mqttHeader.messageType.toString()
-        val ntpTime = mqttHeader.ntpTimeExact.format(DateTimeFormatter.ISO_OFFSET_DATE_TIME)
-        val ntpOk = mqttHeader.ntpValid.toString()
-        val ekeTime = mqttHeader.ekeTimeExact.format(DateTimeFormatter.ISO_OFFSET_DATE_TIME)
-        val mqttTime = mqttReceivedTimestamp?.atZone(ZoneId.of("UTC"))?.format(DateTimeFormatter.ISO_OFFSET_DATE_TIME) ?: ""
         val mqttTopic = topic
-        //Encode raw message to hex string so that it can be added to CSV
-        val rawData = Hex.encodeHexString(payload)
+        val mqttTimeString = mqttTime.format(DateTimeFormatter.ISO_OFFSET_DATE_TIME)
 
-        val csvRecord: List<String> = listOf(messageType, ntpTime, ntpOk, ekeTime, mqttTime, mqttTopic, rawData)
+        val unitNumber = getUnitNumber(topic)
 
-        csvHelper.writeToCsv(formatCsvFileName(mqttHeader.ekeTimeExact.toLocalDateTime(), getUnitNumber(topic)), csvRecord)
+        if (topic.endsWith("connectionStatus")) {
+            val connectionStatus = ConnectionStatus.parseConnectionStatus(payload)
+
+            if (connectionStatus == null) {
+                log.warn { "Failed to parse connection status message, topic: $topic, payload: $payload" }
+                return
+            }
+
+            val csvRecord: List<String> = listOf(
+                ConnectionStatus.CONNECTION_STATUS_MESSAGE_TYPE.toString(),
+                "", //Connection status message does not have NTP time
+                "",
+                connectionStatus.timestamp?.format(DateTimeFormatter.ISO_OFFSET_DATE_TIME) ?: "",
+                mqttTimeString,
+                mqttTopic,
+                connectionStatus.status
+            )
+
+            csvHelper.writeToCsv(formatCsvFileName(mqttTime.withZoneSameInstant(ZoneId.of("Europe/Helsinki")).toLocalDateTime(), unitNumber), csvRecord)
+        } else {
+            val mqttHeader = MqttHeader.parseFromByteArray(payload)
+
+            val messageType = mqttHeader.messageType.toString()
+            val ntpTime = mqttHeader.ntpTimeExact.format(DateTimeFormatter.ISO_OFFSET_DATE_TIME)
+            val ntpOk = mqttHeader.ntpValid.toString()
+            val ekeTime = mqttHeader.ekeTimeExact.format(DateTimeFormatter.ISO_OFFSET_DATE_TIME)
+            //Encode raw message to hex string so that it can be added to CSV
+            val rawData = Hex.encodeHexString(payload)
+
+            val csvRecord: List<String> = listOf(messageType, ntpTime, ntpOk, ekeTime, mqttTimeString, mqttTopic, rawData)
+
+            csvHelper.writeToCsv(formatCsvFileName(mqttHeader.ekeTimeExact.toLocalDateTime(), unitNumber), csvRecord)
+        }
     }
 }
