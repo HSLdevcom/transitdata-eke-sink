@@ -81,9 +81,9 @@ private fun setupTaskToMoveFiles(dataDirectory: Path, sink: Sink, messageHandler
             val allFiles = Files.list(dataDirectory)!!
             //List of the unit number of all the vehicles which have a file
             allFiles
-                //Upload files that have not been modified for 90 minutes (i.e. no new data is coming in)
+                //Upload files that have not been modified for 30 minutes (i.e. no new data is coming in)
                 //TODO: can this cause issues in some cases?
-                .filter { Files.getLastModifiedTime(it).toInstant().plus(90, ChronoUnit.MINUTES).isBefore(now) }
+                .filter { Files.getLastModifiedTime(it).toInstant().plus(30, ChronoUnit.MINUTES).isBefore(now) }
                 .forEach { uncompressed ->
                     //GZIP file and upload to Azure Blob Storage
                     log.debug { "Compressing $uncompressed with GZIP" }
