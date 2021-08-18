@@ -54,8 +54,8 @@ class MessageHandler(context: PulsarApplicationContext, fileDirectory: Path) : I
                 sendMessageSummary(messageSummary)
             }
 
-            if (++handledMessages == 100000) {
-                log.info("Handled 100000 messages, everything seems fine")
+            if (++handledMessages == 1000) {
+                log.info("Handled 1000 messages, everything seems fine")
                 handledMessages = 0
             }
             lastHandledMessage = received.messageId
