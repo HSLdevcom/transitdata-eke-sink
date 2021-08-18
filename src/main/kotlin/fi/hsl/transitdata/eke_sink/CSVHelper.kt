@@ -73,7 +73,7 @@ class CSVHelper(private val fileDirectory: Path, fileOpenDuration: Duration, pri
         override fun destroyObject(key: Path, p: PooledObject<CSVPrinter>) {
             try {
                 log.debug { "Closing CSV file writer for $key" }
-                p.`object`.close()
+                p.`object`.close(true)
             } catch (ioe: IOException) {
                 log.error(ioe) { "Failed to close file writer for $key" }
             }
