@@ -1,7 +1,6 @@
 package fi.hsl.transitdata.eke_sink.messages
 
 import java.time.*
-import java.util.*
 import kotlin.math.max
 import kotlin.math.min
 
@@ -32,17 +31,18 @@ data class MqttHeader(
                 throw IllegalArgumentException("Byte array that contains the header must be at least 12 bytes long")
             }
 
-            val header = BitSet.valueOf(byteArray.copyOf(12))
+            val header = byteArray.copyOf(12)
 
-            val messageType = bytesToInt(fixSize(header.get(0, 5).toByteArray()))
-            val version = bytesToInt(fixSize(header.get(5, 15).toByteArray()))
-            val ntpValid = header.get(15)
+            val firstPart = bytesToInt(fixSize(header.copyOfRange(0, 2)))
+            val messageType = firstPart and 0x1f
+            val version = (firstPart shr 5) and 0x3ff
+            val ntpValid = (firstPart shr 15) == 1
 
-            val ekeTime = bytesToInt(fixSize((header.get(16, 48)).toByteArray()))
-            val ekeTimeHundredsOfSecond = bytesToInt((fixSize(header.get(48, 56).toByteArray())))
+            val ekeTime = bytesToInt(fixSize(header.copyOfRange(2, 6)))
+            val ekeTimeHundredsOfSecond = bytesToInt((fixSize(header.copyOfRange(6, 7))))
 
-            val ntpTime = bytesToInt(fixSize(header.get(56, 88).toByteArray()))
-            val ntpTimeHundredsOfSecond = bytesToInt((fixSize(header.get(88, 96).toByteArray())))
+            val ntpTime = bytesToInt(fixSize(header.copyOfRange(7, 11)))
+            val ntpTimeHundredsOfSecond = bytesToInt((fixSize(header.copyOfRange(11, 12))))
 
             return MqttHeader(messageType, version, ntpValid, ekeTime, ekeTimeHundredsOfSecond, ntpTime, ntpTimeHundredsOfSecond)
         }

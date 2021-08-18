@@ -9,8 +9,9 @@ class MqttHeaderTest {
 
         val mqttHeader = MqttHeader.parseFromByteArray(rawData)
 
-        assertEquals(0, mqttHeader.messageType)
-        assertFalse(mqttHeader.ntpValid)
+        assertEquals(1, mqttHeader.messageType)
+        assertTrue(mqttHeader.ntpValid)
         assertEquals(1625156879, mqttHeader.ekeTime)
+        assertEquals(1625146077, mqttHeader.ntpTime)
     }
 }
