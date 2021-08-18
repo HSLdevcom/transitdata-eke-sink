@@ -30,7 +30,7 @@ class CSVHelper(private val fileDirectory: Path, fileOpenDuration: Duration, pri
         maxIdlePerKey = 1
         maxTotalPerKey = 1
 
-        timeBetweenEvictionRuns = fileOpenDuration.multipliedBy(2)
+        timeBetweenEvictionRuns = fileOpenDuration.dividedBy(2)
         minEvictableIdleTime = fileOpenDuration //Max time to keep the file open
     }
     private val objectPool = CSVPrinterPool(PooledCSVPrinterFactory(csvHeader), objectPoolConfig)
