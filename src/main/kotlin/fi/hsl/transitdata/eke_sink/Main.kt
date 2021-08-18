@@ -90,7 +90,9 @@ private fun setupTaskToMoveFiles(dataDirectory: Path, sink: Sink, messageHandler
                     val compressed = gzip(uncompressed)
                     log.debug { "Compressed $uncompressed to $compressed" }
 
+                    log.info { "Uploading $compressed with ${sink::class.simpleName}" }
                     sink.upload(compressed)
+                    log.info { "Uploaded $compressed" }
 
                     //Delete files that have been uploaded to Azure
                     Files.delete(uncompressed)
