@@ -6,6 +6,7 @@ import fi.hsl.transitdata.eke_sink.azure.AzureBlobClient
 import fi.hsl.transitdata.eke_sink.sink.AzureSink
 import fi.hsl.transitdata.eke_sink.sink.LocalSink
 import fi.hsl.transitdata.eke_sink.sink.Sink
+import fi.hsl.transitdata.eke_sink.utils.DaemonThreadFactory
 import mu.KotlinLogging
 import java.nio.file.Files
 import java.nio.file.Path
@@ -66,11 +67,7 @@ fun main(vararg args: String) {
  * Moves the files from the local storage to a shared azure blob
  */
 private fun setupTaskToMoveFiles(dataDirectory: Path, sink: Sink, messageHandler: MessageHandler){
-    val scheduler = Executors.newSingleThreadScheduledExecutor { runnable ->
-        val thread = Thread(runnable)
-        thread.isDaemon = true
-        return@newSingleThreadScheduledExecutor thread
-    }
+    val scheduler = Executors.newSingleThreadScheduledExecutor(DaemonThreadFactory)
 
     val nextHour = LocalDateTime.now().plusHours(1).withMinute(45)
     val initialDelay = Duration.between(LocalDateTime.now(), nextHour)
