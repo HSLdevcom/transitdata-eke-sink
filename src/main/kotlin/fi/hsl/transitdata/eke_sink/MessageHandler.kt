@@ -101,6 +101,8 @@ class MessageHandler(context: PulsarApplicationContext, fileDirectory: Path) : I
 
         val unitNumber = getUnitNumber(topic)
 
+        val messageReceiveTimeLocal = mqttTime.withZoneSameInstant(ZoneId.of("Europe/Helsinki")).toLocalDateTime()
+
         if (topic.endsWith("connectionStatus")) {
             val connectionStatus = ConnectionStatus.parseConnectionStatus(payload)
 
@@ -119,7 +121,7 @@ class MessageHandler(context: PulsarApplicationContext, fileDirectory: Path) : I
                 connectionStatus.status
             )
 
-            csvHelper.writeToCsv(formatCsvFileName(mqttTime.withZoneSameInstant(ZoneId.of("Europe/Helsinki")).toLocalDateTime(), unitNumber), csvRecord)
+            csvHelper.writeToCsv(formatCsvFileName(messageReceiveTimeLocal, unitNumber), csvRecord)
         } else {
             val mqttHeader = MqttHeader.parseFromByteArray(payload)
 
@@ -132,7 +134,7 @@ class MessageHandler(context: PulsarApplicationContext, fileDirectory: Path) : I
 
             val csvRecord: List<String> = listOf(messageType, ntpTime, ntpOk, ekeTime, mqttTimeString, mqttTopic, rawData)
 
-            csvHelper.writeToCsv(formatCsvFileName(mqttHeader.ekeTimeExact.toLocalDateTime(), unitNumber), csvRecord)
+            csvHelper.writeToCsv(formatCsvFileName(messageReceiveTimeLocal, unitNumber), csvRecord)
         }
     }
 }
