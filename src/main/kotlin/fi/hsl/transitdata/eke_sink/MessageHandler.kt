@@ -5,85 +5,57 @@ import fi.hsl.common.pulsar.IMessageHandler
 import fi.hsl.common.pulsar.PulsarApplicationContext
 import fi.hsl.common.transitdata.TransitdataProperties
 import fi.hsl.common.transitdata.proto.Eke
-import fi.hsl.transitdata.eke_sink.converters.readField
-import fi.hsl.transitdata.eke_sink.messages.Parser
-import fi.hsl.transitdata.eke_sink.messages.id_struct.IdStructParser
-import fi.hsl.transitdata.eke_sink.messages.mqtt_header.EKE_TIME
-import fi.hsl.transitdata.eke_sink.messages.stadlerUDP.StadlerUDPParser
-import fi.hsl.transitdata.eke_sink.messages.rmm_io_struct.RmmIoStructParser
-import fi.hsl.transitdata.eke_sink.messages.rmm_jkv_beacon.RmmJkvBeaconParser
-import fi.hsl.transitdata.eke_sink.messages.rmm_jkv_struct.RmmJkvStructParser
-import fi.hsl.transitdata.eke_sink.messages.rmm_jkv_train_msg.RmmJkvTrainMsgParser
-import fi.hsl.transitdata.eke_sink.messages.rmm_painerajavirhe12.RmmPaineRajaVirhe12
-import fi.hsl.transitdata.eke_sink.messages.rmm_time_changed_data.RmmTimeChangedDataParser
-import fi.hsl.transitdata.eke_sink.messages.stadlerUDP.TRAIN_NUMBER
+import fi.hsl.transitdata.eke_sink.messages.ConnectionStatus
+import fi.hsl.transitdata.eke_sink.messages.MqttHeader
 import mu.KotlinLogging
-import org.apache.commons.csv.CSVFormat
-import org.apache.commons.csv.CSVPrinter
+import org.apache.commons.codec.binary.Hex
 import org.apache.pulsar.client.api.Consumer
 import org.apache.pulsar.client.api.Message
 import org.apache.pulsar.client.api.MessageId
 import org.apache.pulsar.client.api.Producer
-import java.io.File
-import java.text.SimpleDateFormat
 
-import java.io.FileWriter
 import java.nio.file.Path
+import java.time.*
+import java.time.format.DateTimeFormatter
 
 const val TOPIC_PREFIX = "eke/v1/sm5/"
 
-class MessageHandler(context: PulsarApplicationContext, private val fileDirectory: Path, private val outputFormat: String) : IMessageHandler {
+class MessageHandler(context: PulsarApplicationContext, fileDirectory: Path) : IMessageHandler {
     private val log = KotlinLogging.logger {}
 
     private val consumer: Consumer<ByteArray> = context.consumer!!
-    private val sdfDayHour : SimpleDateFormat = SimpleDateFormat("dd-MM-yyyy-HH")
+
     private var lastHandledMessage : MessageId? = null
     private var handledMessages = 0
-    private val producer : Producer<ByteArray> = context.singleProducer!!
-    private val parsers : Map<String, Parser>  = mapOf(
-        "idStruct" to IdStructParser,
-        "rmmIoStruct" to RmmIoStructParser,
-        "rmmJkvStruct" to RmmJkvStructParser,
-        "rmmJkvBeacon" to RmmJkvBeaconParser,
-        "rmmJkvTrainMsg" to RmmJkvTrainMsgParser,
-        "rmmTimeChangedData" to RmmTimeChangedDataParser,
-        "stadlerUDP" to StadlerUDPParser,
-        "rmmPaineRajaVirhe12" to RmmPaineRajaVirhe12
-    )
 
+    private val producer : Producer<ByteArray> = context.singleProducer!!
+
+    private val csvHelper = CSVHelper(fileDirectory, Duration.ofMinutes(30), listOf("message_type", "ntp_timestamp", "ntp_ok", "eke_timestamp", "mqtt_timestamp", "mqtt_topic", "raw_data"))
 
     override fun handleMessage(received: Message<Any>) {
         try {
             val data: ByteArray = received.data
+            //Time when the MQTT message was received (nullable because older versions of mqtt-pulsar-gateway don't support this)
+            val mqttTimestamp = received.properties[TransitdataProperties.KEY_SOURCE_MESSAGE_TIMESTAMP_MS]?.toLong()?.let { epochMilli -> Instant.ofEpochMilli(epochMilli) }
+
             val raw = Mqtt.RawMessage.parseFrom(data)
             val rawPayload = raw.payload.toByteArray()
+            
+            writeToCSVFile(rawPayload, raw.topic, mqttTimestamp)
 
-            var messageIsValid = true
+            if (raw.topic.endsWith("stadlerUDP")) {
+                val header = MqttHeader.parseFromByteArray(rawPayload)
 
-            val messageType = raw.topic.split("/")[raw.topic.split("/").size - 1]
-            val parser = parsers[messageType]
-            if (parser != null) {
-                when(outputFormat) {
-                    "csv" -> writeToCSVFile(rawPayload, raw.topic, parser)
-                    "json" -> writeToJsonFile(rawPayload, raw.topic)
-                }
-            } else {
-                log.error("unknown topic ${raw.topic.split("/")}, ignoring")
-                messageIsValid = false
-            }
-
-            if(messageIsValid && messageType == "stadlerUDP"){
                 val messageSummary = Eke.EkeSummary.newBuilder()
-                    .setEkeDate(rawPayload.readField(EKE_TIME).toInstant().toEpochMilli())
-                    .setTrainNumber(rawPayload.readField(TRAIN_NUMBER))
+                    .setEkeDate(header.ekeTimeExact.toInstant().toEpochMilli())
+                    .setTrainNumber(getUnitNumber(raw.topic).toInt())
                     .setTopicPart(raw.topic)
                     .build()
                 sendMessageSummary(messageSummary)
             }
 
-            handledMessages++
-            if(handledMessages == 100000){
-                log.info("Handled 100000 messages, everything seems fine")
+            if (++handledMessages == 1000) {
+                log.info("Handled 1000 messages, everything seems fine")
                 handledMessages = 0
             }
             lastHandledMessage = received.messageId
@@ -105,39 +77,64 @@ class MessageHandler(context: PulsarApplicationContext, private val fileDirector
         }
     }
 
-    private fun sendMessageSummary(messageSummary : Eke.EkeSummary){
+    private fun sendMessageSummary(messageSummary: Eke.EkeSummary){
         producer.newMessage()
             .property(TransitdataProperties.KEY_PROTOBUF_SCHEMA, TransitdataProperties.ProtobufSchema.EkeSummary.toString())
             .value(messageSummary.toByteArray())
             .sendAsync()
     }
 
-    private fun getUnitNumber(topic : String) : String{
+    private fun getUnitNumber(topic: String) : String{
         return topic.replace(TOPIC_PREFIX,"").split("/")[0]
     }
 
-    private fun writeToCSVFile(payload: ByteArray, topic : String, parser : Parser)  {
-        val date = payload.readField(EKE_TIME)
-        val messageType = topic.split("/")[topic.split("/").size - 1]
+    private fun writeToCSVFile(payload: ByteArray, topic: String, mqttReceivedTimestamp: Instant?)  {
+        val mqttTime = mqttReceivedTimestamp?.atZone(ZoneId.of("UTC"))
 
-        val file = fileDirectory.resolve(String.format(CSV_FILE_NAME_PATTERN, messageType, sdfDayHour.format(date), getUnitNumber(topic))).toFile()
+        if (mqttTime == null) {
+            log.warn { "No MQTT received timestamp, cannot store message" }
+            return
+        }
 
-        val csvPrinter = if (file.exists()) {
-            CSVPrinter(FileWriter(file, true), CSVFormat.DEFAULT.withDelimiter(';'))
+        val mqttTopic = topic
+        val mqttTimeString = mqttTime.format(DateTimeFormatter.ISO_OFFSET_DATE_TIME)
+
+        val unitNumber = getUnitNumber(topic)
+
+        val messageReceiveTimeLocal = mqttTime.withZoneSameInstant(ZoneId.of("Europe/Helsinki")).toLocalDateTime()
+
+        if (topic.endsWith("connectionStatus")) {
+            val connectionStatus = ConnectionStatus.parseConnectionStatus(payload)
+
+            if (connectionStatus == null) {
+                log.warn { "Failed to parse connection status message, topic: $topic, payload: $payload" }
+                return
+            }
+
+            val csvRecord: List<String> = listOf(
+                ConnectionStatus.CONNECTION_STATUS_MESSAGE_TYPE.toString(),
+                "", //Connection status message does not have NTP time
+                "",
+                connectionStatus.timestamp?.format(DateTimeFormatter.ISO_OFFSET_DATE_TIME) ?: "",
+                mqttTimeString,
+                mqttTopic,
+                connectionStatus.status
+            )
+
+            csvHelper.writeToCsv(formatCsvFileName(messageReceiveTimeLocal, unitNumber), csvRecord)
         } else {
-            CSVPrinter(FileWriter(file, false), CSVFormat.DEFAULT.withDelimiter(';').withHeader(*parser.fields.map { it.fieldName }.toTypedArray()))
-        }
-        csvPrinter.use {
-            csvPrinter.printRecord(*parser.getFieldValues(payload))
-            csvPrinter.flush()
-        }
-    }
+            val mqttHeader = MqttHeader.parseFromByteArray(payload)
 
-    private fun writeToJsonFile(payload: ByteArray, topic : String){
-        val date = payload.readField(EKE_TIME)
-        val apcJson = StadlerUDPParser.toJson(payload, topic)
-        val file = fileDirectory.resolve(String.format(JSON_FILE_NAME_PATTERN, topic, sdfDayHour.format(date), getUnitNumber(topic))).toFile()
-        if(!file.exists()) file.createNewFile()
-        file.appendText("${apcJson}\n")
+            val messageType = mqttHeader.messageType.toString()
+            val ntpTime = mqttHeader.ntpTimeExact.format(DateTimeFormatter.ISO_OFFSET_DATE_TIME)
+            val ntpOk = mqttHeader.ntpValid.toString()
+            val ekeTime = mqttHeader.ekeTimeExact.format(DateTimeFormatter.ISO_OFFSET_DATE_TIME)
+            //Encode raw message to hex string so that it can be added to CSV
+            val rawData = Hex.encodeHexString(payload)
+
+            val csvRecord: List<String> = listOf(messageType, ntpTime, ntpOk, ekeTime, mqttTimeString, mqttTopic, rawData)
+
+            csvHelper.writeToCsv(formatCsvFileName(messageReceiveTimeLocal, unitNumber), csvRecord)
+        }
     }
 }
