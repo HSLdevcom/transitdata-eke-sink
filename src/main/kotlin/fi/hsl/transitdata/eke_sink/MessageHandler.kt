@@ -28,7 +28,7 @@ class MessageHandler(context: PulsarApplicationContext, fileDirectory: Path) : I
     private var lastHandledMessage : MessageId? = null
     private var handledMessages = 0
 
-    private val producer : Producer<ByteArray> = context.singleProducer!!
+    private val producer : Producer<ByteArray>? = if (context.config!!.getBoolean("pulsar.producer.enabled")) { context.singleProducer!! } else { null }
 
     private val csvHelper = CSVHelper(fileDirectory, Duration.ofMinutes(30), listOf("message_type", "ntp_timestamp", "ntp_ok", "eke_timestamp", "mqtt_timestamp", "mqtt_topic", "raw_data"))
 
@@ -77,11 +77,10 @@ class MessageHandler(context: PulsarApplicationContext, fileDirectory: Path) : I
         }
     }
 
-    private fun sendMessageSummary(messageSummary: Eke.EkeSummary){
-        producer.newMessage()
-            .property(TransitdataProperties.KEY_PROTOBUF_SCHEMA, TransitdataProperties.ProtobufSchema.EkeSummary.toString())
-            .value(messageSummary.toByteArray())
-            .sendAsync()
+    private fun sendMessageSummary(messageSummary: Eke.EkeSummary) {
+        //Fails quietly if producer is null (when summary messages are not enabled)
+        producer?.newMessage()?.property(TransitdataProperties.KEY_PROTOBUF_SCHEMA, TransitdataProperties.ProtobufSchema.EkeSummary.toString())
+            ?.value(messageSummary.toByteArray())?.sendAsync()
     }
 
     private fun getUnitNumber(topic: String) : String{
