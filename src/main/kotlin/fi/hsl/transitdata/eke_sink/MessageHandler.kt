@@ -17,6 +17,7 @@ import org.apache.pulsar.client.api.Producer
 import java.nio.file.Path
 import java.time.*
 import java.time.format.DateTimeFormatter
+import java.util.*
 
 const val TOPIC_PREFIX = "eke/v1/sm5/"
 
@@ -25,12 +26,15 @@ class MessageHandler(context: PulsarApplicationContext, fileDirectory: Path) : I
 
     private val consumer: Consumer<ByteArray> = context.consumer!!
 
-    private var lastHandledMessage : MessageId? = null
     private var handledMessages = 0
 
     private val producer : Producer<ByteArray>? = if (context.config!!.getBoolean("pulsar.producer.enabled")) { context.singleProducer!! } else { null }
 
     private val csvHelper = CSVHelper(fileDirectory, Duration.ofMinutes(30), listOf("message_type", "ntp_timestamp", "ntp_ok", "eke_timestamp", "mqtt_timestamp", "mqtt_topic", "raw_data"))
+
+    private val fileToMsgId = mutableMapOf<Path, MutableList<MessageId>>()
+    
+    private fun getMsgIdList(path: Path): MutableList<MessageId> = fileToMsgId.computeIfAbsent(path) { LinkedList<MessageId>() }
 
     override fun handleMessage(received: Message<Any>) {
         try {
@@ -41,7 +45,8 @@ class MessageHandler(context: PulsarApplicationContext, fileDirectory: Path) : I
             val raw = Mqtt.RawMessage.parseFrom(data)
             val rawPayload = raw.payload.toByteArray()
             
-            writeToCSVFile(rawPayload, raw.topic, mqttTimestamp)
+            val file = writeToCSVFile(rawPayload, raw.topic, mqttTimestamp)
+            file?.let { getMsgIdList(it).add(received.messageId) }
 
             if (raw.topic.endsWith("stadlerUDP")) {
                 val header = MqttHeader.parseFromByteArray(rawPayload)
@@ -58,23 +63,26 @@ class MessageHandler(context: PulsarApplicationContext, fileDirectory: Path) : I
                 log.info("Handled 1000 messages, everything seems fine")
                 handledMessages = 0
             }
-            lastHandledMessage = received.messageId
         } catch (e: Exception) {
             log.error("Exception while handling message", e)
         }
     }
 
-    fun ackMessages() {
-        if (lastHandledMessage != null){
-            //Acknowledge all messages up to and including last received
-            //TODO: should we acknowledge messages individually?
-            consumer.acknowledgeCumulativeAsync(lastHandledMessage)
+    /**
+     * Acks messages which were written to the specified file
+     */
+    fun ackMessages(path: Path) {
+        val messageIds = getMsgIdList(path)
+        log.info { "Acknowledging ${messageIds.size} messages which were written to $path" }
+        messageIds.forEach {
+            consumer.acknowledgeAsync(it)
                 .exceptionally { throwable ->
-                    log.error("Failed to ack Pulsar messages", throwable)
+                    log.error("Failed to ack Pulsar message", throwable)
                     null
                 }
                 .thenRun {}
         }
+        fileToMsgId.remove(path)
     }
 
     private fun sendMessageSummary(messageSummary: Eke.EkeSummary) {
@@ -87,12 +95,12 @@ class MessageHandler(context: PulsarApplicationContext, fileDirectory: Path) : I
         return topic.replace(TOPIC_PREFIX,"").split("/")[0]
     }
 
-    private fun writeToCSVFile(payload: ByteArray, topic: String, mqttReceivedTimestamp: Instant?)  {
+    private fun writeToCSVFile(payload: ByteArray, topic: String, mqttReceivedTimestamp: Instant?): Path? {
         val mqttTime = mqttReceivedTimestamp?.atZone(ZoneId.of("UTC"))
 
         if (mqttTime == null) {
             log.warn { "No MQTT received timestamp, cannot store message" }
-            return
+            return null
         }
 
         val mqttTopic = topic
@@ -107,7 +115,7 @@ class MessageHandler(context: PulsarApplicationContext, fileDirectory: Path) : I
 
             if (connectionStatus == null) {
                 log.warn { "Failed to parse connection status message, topic: $topic, payload: $payload" }
-                return
+                return null
             }
 
             val csvRecord: List<String> = listOf(
@@ -120,7 +128,7 @@ class MessageHandler(context: PulsarApplicationContext, fileDirectory: Path) : I
                 connectionStatus.status
             )
 
-            csvHelper.writeToCsv(formatCsvFileName(messageReceiveTimeLocal, unitNumber), csvRecord)
+            return csvHelper.writeToCsv(formatCsvFileName(messageReceiveTimeLocal, unitNumber), csvRecord)
         } else {
             val mqttHeader = MqttHeader.parseFromByteArray(payload)
 
@@ -133,7 +141,7 @@ class MessageHandler(context: PulsarApplicationContext, fileDirectory: Path) : I
 
             val csvRecord: List<String> = listOf(messageType, ntpTime, ntpOk, ekeTime, mqttTimeString, mqttTopic, rawData)
 
-            csvHelper.writeToCsv(formatCsvFileName(messageReceiveTimeLocal, unitNumber), csvRecord)
+            return csvHelper.writeToCsv(formatCsvFileName(messageReceiveTimeLocal, unitNumber), csvRecord)
         }
     }
 }
