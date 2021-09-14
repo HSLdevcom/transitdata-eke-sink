@@ -40,8 +40,10 @@ class CSVHelper(private val fileDirectory: Path, fileOpenDuration: Duration, pri
      *
      * @param fileName File name without .csv suffix (e.g. "example" would write to example.csv)
      * @param values List of values. The list must have equal length to CSV header list
+     *
+     * @return Path of the file where data was written to
      */
-    fun writeToCsv(fileName: String, values: List<String>) {
+    fun writeToCsv(fileName: String, values: List<String>): Path {
         if (values.size != csvHeader.size) {
             throw IllegalArgumentException("List contained different amount of values than CSV header (list: ${values.size}, header: ${csvHeader.size})")
         }
@@ -56,6 +58,7 @@ class CSVHelper(private val fileDirectory: Path, fileOpenDuration: Duration, pri
                 objectPool.returnObject(csvFile, csvPrinter)
             }
         }
+        return csvFile.toAbsolutePath()
     }
 
 
