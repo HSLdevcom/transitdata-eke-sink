@@ -6,7 +6,7 @@ import java.time.LocalDateTime
 class ConnectionStatusTest {
     @Test
     fun `Test parse Connected at message`() {
-        val payload = "Connected at 20210817T160000Z"
+        val payload = "Connected at 20210817T160000Z\u0000"
 
         val connectionStatus = ConnectionStatus.parseConnectionStatus(payload.toByteArray(Charsets.UTF_8))
 
