@@ -6,11 +6,10 @@ plugins {
 }
 
 group 'fi.hsl'
-version '1.0.1'
+version '1.0.2'
 
 repositories {
     mavenCentral()
-    jcenter()
     maven {
         url "https://maven.pkg.github.com/HSLdevcom/*"
         credentials {
@@ -53,20 +52,19 @@ dependencies {
     implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-core:1.3.7'
     implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-jdk8:1.3.2'
 
-    implementation 'fi.hsl:transitdata-common:1.3.25'
+    implementation('fi.hsl:transitdata-common:1.3.25') {
+        exclude group: 'javax.xml.bind', module: 'activation'
+    }
+    //Needed for Pulsar
+    implementation 'jaxb:activation:1.0.2'
 
-    //implementation 'org.liquibase:liquibase-core:4.0.0'
-    //implementation 'org.postgresql:postgresql:9.3-1100-jdbc4'
-
-    implementation "com.azure:azure-storage-blob:12.0.0"
-    implementation "com.azure:azure-storage-queue:12.0.0"
+    implementation 'com.azure:azure-storage-blob:12.13.0'
+    implementation 'io.netty:netty-tcnative-boringssl-static:2.0.39.Final'
 
     implementation "org.apache.commons:commons-csv:1.8"
     implementation "org.apache.commons:commons-pool2:2.10.0"
     implementation "commons-codec:commons-codec:1.15"
 
-    //testCompile 'com.h2database:h2:1.4.200'
-    testImplementation 'org.json:json:20201115'
     //implementation  fileTree(dir: 'libs', include: '*.jar')
 }
 

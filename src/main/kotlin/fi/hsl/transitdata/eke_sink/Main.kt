@@ -84,6 +84,7 @@ private fun setupTaskToMoveFiles(dataDirectory: Path, sink: Sink, messageHandler
                 //Upload files that have not been modified for 30 minutes (i.e. no new data is coming in)
                 //TODO: can this cause issues in some cases?
                 .filter { Files.getLastModifiedTime(it).toInstant().plus(30, ChronoUnit.MINUTES).isBefore(now) }
+                .map { it.toAbsolutePath() }
                 .forEach { uncompressed ->
                     //GZIP file and upload to Azure Blob Storage
                     log.debug { "Compressing $uncompressed with GZIP" }
@@ -97,11 +98,11 @@ private fun setupTaskToMoveFiles(dataDirectory: Path, sink: Sink, messageHandler
                     //Delete files that have been uploaded to Azure
                     Files.delete(uncompressed)
                     Files.delete(compressed)
+
+                    messageHandler.ackMessages(uncompressed)
                 }
 
             log.info("Done to uploading files to blob")
-            messageHandler.ackMessages()
-            log.info("Pulsar messages acknowledged")
         } catch(t : Throwable) {
             log.error("Something went wrong while moving the files to blob", t)
         }

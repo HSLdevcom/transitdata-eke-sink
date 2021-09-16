@@ -19,3 +19,7 @@ The fields are described below:
 | `mqtt_timestamp` | ISO 8601    | Time when the MQTT message was received.
 | `mqtt_topic`     | String      | MQTT topic where the message was sent to.
 | `raw_data`       | String      | Raw MQTT payload, including the 12 byte header, encoded as hexadecimal string. Connection status in human-readable format for connection status messages.
+
+Each CSV file will contain messages received from a single train unit within an hour. Note that the messages can be buffered in the train (in case of network connection problems etc.), which means that files can contain much older data than what their name suggests.
+
+The file name format is `{datetime}_vehicle_{trainnumber}.csv.gz` where `{datetime}` is the date and hour when the message was received in format `yyyy-MM-dd'T'HH` and `{trainnumber}` is the train unit number.
