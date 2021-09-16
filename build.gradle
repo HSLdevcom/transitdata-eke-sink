@@ -10,7 +10,6 @@ version '1.0.1'
 
 repositories {
     mavenCentral()
-    jcenter()
     maven {
         url "https://maven.pkg.github.com/HSLdevcom/*"
         credentials {
