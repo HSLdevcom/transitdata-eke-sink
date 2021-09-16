@@ -14,7 +14,8 @@ data class ConnectionStatus(val status: String, val connected: Boolean, val time
         private val TIMEZONE = ZoneId.of("Europe/Helsinki")
 
         private fun parseConnectionStatusTimestamp(string: String): ZonedDateTime {
-            return LocalDateTime.parse(string, DateTimeFormatter.ofPattern(TIMESTAMP_FORMAT)).atZone(TIMEZONE)
+            val trimmedString = string.trim().trim('\u0000') //Trim whitespace and null characters so that the date can be parsed
+            return LocalDateTime.parse(trimmedString, DateTimeFormatter.ofPattern(TIMESTAMP_FORMAT)).atZone(TIMEZONE)
         }
 
         fun parseConnectionStatus(byteArray: ByteArray): ConnectionStatus? {
