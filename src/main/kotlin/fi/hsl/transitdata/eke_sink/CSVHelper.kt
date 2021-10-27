@@ -18,7 +18,7 @@ import java.time.Duration
 /**
  * Helper for writing CSV files. Uses object pool to avoid reopening files for better performance.
  */
-class CSVHelper(private val fileDirectory: Path, fileOpenDuration: Duration, private val csvHeader: List<String>) {
+class CSVHelper(private val fileDirectory: Path, fileOpenDuration: Duration, private val csvHeader: List<String>, addToUploadList: (Path) -> Unit) {
     init {
         if (!Files.isDirectory(fileDirectory)) {
             throw IllegalArgumentException("$fileDirectory is not directory")
@@ -33,7 +33,7 @@ class CSVHelper(private val fileDirectory: Path, fileOpenDuration: Duration, pri
         timeBetweenEvictionRuns = fileOpenDuration.dividedBy(2)
         minEvictableIdleTime = fileOpenDuration //Max time to keep the file open
     }
-    private val objectPool = CSVPrinterPool(PooledCSVPrinterFactory(csvHeader), objectPoolConfig)
+    private val objectPool = CSVPrinterPool(PooledCSVPrinterFactory(csvHeader, addToUploadList), objectPoolConfig)
 
     /**
      * Writes values to CSV file with specified name
@@ -48,7 +48,7 @@ class CSVHelper(private val fileDirectory: Path, fileOpenDuration: Duration, pri
             throw IllegalArgumentException("List contained different amount of values than CSV header (list: ${values.size}, header: ${csvHeader.size})")
         }
 
-        val csvFile = fileDirectory.resolve("$fileName.csv")
+        val csvFile = fileDirectory.resolve("$fileName.csv").toAbsolutePath()
         var csvPrinter: CSVPrinter? = null
         try {
             csvPrinter = objectPool.borrowObject(csvFile)
@@ -58,13 +58,13 @@ class CSVHelper(private val fileDirectory: Path, fileOpenDuration: Duration, pri
                 objectPool.returnObject(csvFile, csvPrinter)
             }
         }
-        return csvFile.toAbsolutePath()
+        return csvFile
     }
 
 
     private class CSVPrinterPool(factory: KeyedPooledObjectFactory<Path, CSVPrinter>, config: GenericKeyedObjectPoolConfig<CSVPrinter>) : GenericKeyedObjectPool<Path, CSVPrinter>(factory, config)
 
-    private class PooledCSVPrinterFactory(private val csvHeader: List<String>) : BaseKeyedPooledObjectFactory<Path, CSVPrinter>() {
+    private class PooledCSVPrinterFactory(private val csvHeader: List<String>, private val addToUploadList: (Path) -> Unit) : BaseKeyedPooledObjectFactory<Path, CSVPrinter>() {
         private val log = KotlinLogging.logger {}
 
         override fun create(key: Path): CSVPrinter = CSVPrinter(Files.newBufferedWriter(key, StandardCharsets.UTF_8), CSVFormat.RFC4180.withHeader(*csvHeader.toTypedArray()))
@@ -77,6 +77,8 @@ class CSVHelper(private val fileDirectory: Path, fileOpenDuration: Duration, pri
             try {
                 log.debug { "Closing CSV file writer for $key" }
                 p.`object`.close(true)
+
+                addToUploadList(key)
             } catch (ioe: IOException) {
                 log.error(ioe) { "Failed to close file writer for $key" }
             }
