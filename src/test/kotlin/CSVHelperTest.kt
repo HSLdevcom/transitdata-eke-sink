@@ -20,10 +20,12 @@ class CSVHelperTest {
     private lateinit var directory: Path
     private lateinit var csvHelper: CSVHelper
 
+    private val readyToUpload = mutableSetOf<Path>()
+
     @Before
     fun setup() {
         directory = temporaryFolder.newFolder().toPath()
-        csvHelper = CSVHelper(directory, Duration.ofSeconds(2), listOf("a", "b"))
+        csvHelper = CSVHelper(directory, Duration.ofSeconds(2), listOf("a", "b"), readyToUpload::add)
     }
 
     @ExperimentalPathApi
@@ -42,5 +44,15 @@ class CSVHelperTest {
         assertEquals("a,b", content[0])
         assertEquals("1,2", content[1])
         assertEquals("3,4", content[2])
+    }
+
+    @Test
+    fun `Test file is added to upload list after closing`() {
+        csvHelper.writeToCsv("test", listOf("1", "2"))
+
+        Thread.sleep(3000)
+
+        assertEquals(1, readyToUpload.size)
+        assertTrue(readyToUpload.contains(directory.resolve("test.csv")))
     }
 }

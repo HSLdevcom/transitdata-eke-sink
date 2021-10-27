@@ -34,11 +34,19 @@ fun main(vararg args: String) {
         Files.createDirectories(dataDirectory)
     }
 
+    val readyToUpload = mutableSetOf<Path>()
+
+    fun addToUploadList(path: Path) = synchronized(readyToUpload) { readyToUpload.add(path) }
+
+    fun getReadyToUploadCopy(): List<Path> = synchronized(readyToUpload) { readyToUpload.toList() }
+
+    fun removeFromUploadList(path: Path) = synchronized(readyToUpload) { readyToUpload.remove(path) }
+
     try {
         PulsarApplication.newInstance(config).use { app ->
             val context = app.context
 
-            val messageHandler = MessageHandler(context, dataDirectory)
+            val messageHandler = MessageHandler(context, dataDirectory, ::addToUploadList)
 
             val sinkType = config.getString("application.sink")
             val sink = if (sinkType == "local") {
@@ -52,7 +60,8 @@ fun main(vararg args: String) {
             }
 
             setupTaskToMoveFiles(
-                dataDirectory,
+                ::getReadyToUploadCopy,
+                ::removeFromUploadList,
                 sink,
                 messageHandler)
 
@@ -66,7 +75,7 @@ fun main(vararg args: String) {
 /**
  * Moves the files from the local storage to a shared azure blob
  */
-private fun setupTaskToMoveFiles(dataDirectory: Path, sink: Sink, messageHandler: MessageHandler){
+private fun setupTaskToMoveFiles(getReadyToUploadCopy: () -> List<Path>, removeFromUploadList: (Path) -> Unit, sink: Sink, messageHandler: MessageHandler){
     val scheduler = Executors.newSingleThreadScheduledExecutor(DaemonThreadFactory)
 
     val nextHour = LocalDateTime.now().plusHours(1).withMinute(45)
@@ -76,15 +85,7 @@ private fun setupTaskToMoveFiles(dataDirectory: Path, sink: Sink, messageHandler
         try {
             log.info("Starting to upload files to Blob Storage")
 
-            val now = Instant.now()
-            //Collect trains
-            val allFiles = Files.list(dataDirectory)!!
-            //List of the unit number of all the vehicles which have a file
-            allFiles
-                //Upload files that have not been modified for 30 minutes (i.e. no new data is coming in)
-                //TODO: can this cause issues in some cases?
-                .filter { Files.getLastModifiedTime(it).toInstant().plus(30, ChronoUnit.MINUTES).isBefore(now) }
-                .map { it.toAbsolutePath() }
+            getReadyToUploadCopy()
                 .forEach { uncompressed ->
                     //GZIP file and upload to Azure Blob Storage
                     log.debug { "Compressing $uncompressed with GZIP" }
@@ -98,6 +99,8 @@ private fun setupTaskToMoveFiles(dataDirectory: Path, sink: Sink, messageHandler
                     //Delete files that have been uploaded to Azure
                     Files.delete(uncompressed)
                     Files.delete(compressed)
+
+                    removeFromUploadList(uncompressed)
 
                     messageHandler.ackMessages(uncompressed)
                 }
