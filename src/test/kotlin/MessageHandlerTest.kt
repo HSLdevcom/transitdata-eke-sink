@@ -61,7 +61,7 @@ class MessageHandlerTest {
             Files.createDirectories(directory)
         }
 
-        val handler = MessageHandler(mockContext, directory)
+        val handler = MessageHandler(mockContext, directory, {})
         handler.handleMessage(mock<Message<Any>> {
             on { data } doAnswer { Mqtt.RawMessage.newBuilder().setPayload(ByteString.copyFrom(getMessageContent())).setTopic("eke/v1/sm5/15/A/stadlerUDP").setSchemaVersion(1).build().toByteArray() }
             on { properties } doReturn(Collections.singletonMap(fi.hsl.common.transitdata.TransitdataProperties.KEY_SOURCE_MESSAGE_TIMESTAMP_MS, java.time.Instant.now().toEpochMilli().toString()))

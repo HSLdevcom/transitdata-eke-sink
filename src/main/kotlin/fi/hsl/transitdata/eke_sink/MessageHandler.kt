@@ -21,7 +21,7 @@ import java.util.*
 
 const val TOPIC_PREFIX = "eke/v1/sm5/"
 
-class MessageHandler(context: PulsarApplicationContext, fileDirectory: Path) : IMessageHandler {
+class MessageHandler(context: PulsarApplicationContext, fileDirectory: Path, addToUploadList: (Path) -> Unit) : IMessageHandler {
     private val log = KotlinLogging.logger {}
 
     private val consumer: Consumer<ByteArray> = context.consumer!!
@@ -30,7 +30,7 @@ class MessageHandler(context: PulsarApplicationContext, fileDirectory: Path) : I
 
     private val producer : Producer<ByteArray>? = if (context.config!!.getBoolean("pulsar.producer.enabled")) { context.singleProducer!! } else { null }
 
-    private val csvHelper = CSVHelper(fileDirectory, Duration.ofMinutes(30), listOf("message_type", "ntp_timestamp", "ntp_ok", "eke_timestamp", "mqtt_timestamp", "mqtt_topic", "raw_data"))
+    private val csvHelper = CSVHelper(fileDirectory, Duration.ofMinutes(30), listOf("message_type", "ntp_timestamp", "ntp_ok", "eke_timestamp", "mqtt_timestamp", "mqtt_topic", "raw_data"), addToUploadList)
 
     private val fileToMsgId = mutableMapOf<Path, MutableList<MessageId>>()
     
