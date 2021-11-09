@@ -32,7 +32,7 @@ class MessageHandler(context: PulsarApplicationContext, fileDirectory: Path, add
 
     private val producer : Producer<ByteArray>? = if (context.config!!.getBoolean("pulsar.producer.enabled")) { context.singleProducer!! } else { null }
 
-    private val csvHelper = CSVHelper(fileDirectory, Duration.ofMinutes(30), listOf("message_type", "ntp_timestamp", "ntp_ok", "eke_timestamp", "mqtt_timestamp", "mqtt_topic", "raw_data"), addToUploadList)
+    private val csvHelper = CSVHelper(fileDirectory, Duration.ofMinutes(30), true, listOf("message_type", "ntp_timestamp", "ntp_ok", "eke_timestamp", "mqtt_timestamp", "mqtt_topic", "raw_data"), addToUploadList)
 
     private val fileToMsgId = mutableMapOf<Path, MutableList<MessageId>>()
     

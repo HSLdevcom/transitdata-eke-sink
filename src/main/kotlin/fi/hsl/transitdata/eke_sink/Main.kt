@@ -12,13 +12,10 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.time.Duration
-import java.time.Instant
 import java.time.LocalDateTime
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 
-import java.time.temporal.ChronoUnit
-import kotlin.io.path.absolutePathString
 import kotlin.time.DurationUnit
 import kotlin.time.ExperimentalTime
 import kotlin.time.toDuration
@@ -86,23 +83,17 @@ private fun setupTaskToMoveFiles(getReadyToUploadCopy: () -> List<Path>, removeF
             log.info("Starting to upload files to Blob Storage")
 
             getReadyToUploadCopy()
-                .forEach { uncompressed ->
-                    //GZIP file and upload to Azure Blob Storage
-                    log.debug { "Compressing $uncompressed with GZIP" }
-                    val compressed = gzip(uncompressed)
-                    log.debug { "Compressed $uncompressed to $compressed" }
-
-                    log.info { "Uploading $compressed with ${sink::class.simpleName}" }
-                    sink.upload(compressed)
-                    log.info { "Uploaded $compressed" }
+                .forEach { file ->
+                    log.info { "Uploading $file with ${sink::class.simpleName}" }
+                    sink.upload(file)
+                    log.info { "Uploaded $file" }
 
                     //Delete files that have been uploaded to Azure
-                    Files.delete(uncompressed)
-                    Files.delete(compressed)
+                    Files.delete(file)
 
-                    removeFromUploadList(uncompressed)
+                    removeFromUploadList(file)
 
-                    messageHandler.ackMessages(uncompressed)
+                    messageHandler.ackMessages(file)
                 }
 
             log.info("Done to uploading files to blob")
