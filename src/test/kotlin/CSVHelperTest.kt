@@ -28,7 +28,7 @@ class CSVHelperTest {
         readyToUpload = mutableSetOf()
 
         directory = temporaryFolder.newFolder().toPath()
-        csvHelper = CSVHelper(directory, Duration.ofSeconds(5), listOf("a", "b"), readyToUpload::add)
+        csvHelper = CSVHelper(directory, Duration.ofSeconds(5), false, listOf("a", "b"), readyToUpload::add)
     }
 
     @ExperimentalPathApi

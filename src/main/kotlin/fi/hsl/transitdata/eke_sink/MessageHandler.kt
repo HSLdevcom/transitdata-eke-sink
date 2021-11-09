@@ -19,7 +19,9 @@ import java.time.*
 import java.time.format.DateTimeFormatter
 import java.util.*
 
-const val TOPIC_PREFIX = "eke/v1/sm5/"
+private const val TOPIC_PREFIX = "eke/v1/sm5/"
+
+private const val LOG_THRESHOLD = 10000
 
 class MessageHandler(context: PulsarApplicationContext, fileDirectory: Path, addToUploadList: (Path) -> Unit) : IMessageHandler {
     private val log = KotlinLogging.logger {}
@@ -30,7 +32,7 @@ class MessageHandler(context: PulsarApplicationContext, fileDirectory: Path, add
 
     private val producer : Producer<ByteArray>? = if (context.config!!.getBoolean("pulsar.producer.enabled")) { context.singleProducer!! } else { null }
 
-    private val csvHelper = CSVHelper(fileDirectory, Duration.ofMinutes(30), listOf("message_type", "ntp_timestamp", "ntp_ok", "eke_timestamp", "mqtt_timestamp", "mqtt_topic", "raw_data"), addToUploadList)
+    private val csvHelper = CSVHelper(fileDirectory, Duration.ofMinutes(30), true, listOf("message_type", "ntp_timestamp", "ntp_ok", "eke_timestamp", "mqtt_timestamp", "mqtt_topic", "raw_data"), addToUploadList)
 
     private val fileToMsgId = mutableMapOf<Path, MutableList<MessageId>>()
     
@@ -59,8 +61,8 @@ class MessageHandler(context: PulsarApplicationContext, fileDirectory: Path, add
                 sendMessageSummary(messageSummary)
             }
 
-            if (++handledMessages == 1000) {
-                log.info("Handled 1000 messages, everything seems fine")
+            if (++handledMessages == LOG_THRESHOLD) {
+                log.info("Handled $LOG_THRESHOLD messages, everything seems fine")
                 handledMessages = 0
             }
         } catch (e: Exception) {
