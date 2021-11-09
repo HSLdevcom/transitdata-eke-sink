@@ -2,7 +2,7 @@ package fi.hsl.transitdata.eke_sink
 
 import fi.hsl.common.config.ConfigParser
 import fi.hsl.common.pulsar.PulsarApplication
-import fi.hsl.transitdata.eke_sink.azure.AzureBlobClient
+import fi.hsl.transitdata.eke_sink.azure.BlobUploader
 import fi.hsl.transitdata.eke_sink.sink.AzureSink
 import fi.hsl.transitdata.eke_sink.sink.LocalSink
 import fi.hsl.transitdata.eke_sink.sink.Sink
@@ -53,7 +53,7 @@ fun main(vararg args: String) {
                 LocalSink(sinkDirectory, 50.toDuration(DurationUnit.MILLISECONDS), 50)
             } else {
                 log.info { "Using Azure sink for uploading files to Blob Storage" }
-                AzureSink(AzureBlobClient(config.getString("application.blobConnectionString"), config.getString("application.blobContainer")))
+                AzureSink(BlobUploader(config.getString("application.blobConnectionString"), config.getString("application.blobContainer")))
             }
 
             setupTaskToMoveFiles(
