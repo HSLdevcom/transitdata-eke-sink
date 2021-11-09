@@ -19,7 +19,9 @@ import java.time.*
 import java.time.format.DateTimeFormatter
 import java.util.*
 
-const val TOPIC_PREFIX = "eke/v1/sm5/"
+private const val TOPIC_PREFIX = "eke/v1/sm5/"
+
+private const val LOG_THRESHOLD = 10000
 
 class MessageHandler(context: PulsarApplicationContext, fileDirectory: Path, addToUploadList: (Path) -> Unit) : IMessageHandler {
     private val log = KotlinLogging.logger {}
@@ -59,8 +61,8 @@ class MessageHandler(context: PulsarApplicationContext, fileDirectory: Path, add
                 sendMessageSummary(messageSummary)
             }
 
-            if (++handledMessages == 1000) {
-                log.info("Handled 1000 messages, everything seems fine")
+            if (++handledMessages == LOG_THRESHOLD) {
+                log.info("Handled $LOG_THRESHOLD messages, everything seems fine")
                 handledMessages = 0
             }
         } catch (e: Exception) {
