@@ -88,12 +88,12 @@ private fun setupTaskToMoveFiles(getReadyToUploadCopy: () -> List<Path>, removeF
                     sink.upload(file)
                     log.info { "Uploaded $file" }
 
-                    //Delete files that have been uploaded to Azure
-                    Files.delete(file)
-
-                    removeFromUploadList(file)
-
+                    //Acknowledge messages that were written to the file
                     messageHandler.ackMessages(file)
+                    //Delete the file from the disk
+                    Files.deleteIfExists(file)
+                    //Remove file from the upload list so that it won't be uploaded again
+                    removeFromUploadList(file)
                 }
 
             log.info("Done to uploading files to blob")
