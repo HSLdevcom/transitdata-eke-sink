@@ -80,10 +80,10 @@ private fun setupTaskToMoveFiles(getReadyToUploadCopy: () -> List<Path>, removeF
 
     scheduler.scheduleWithFixedDelay({
         try {
-            log.info("Starting to upload files to Blob Storage")
+            val readyForUpload = getReadyToUploadCopy()
+            log.info{ "Starting to upload files to Blob Storage. Number of files to upload: ${readyForUpload.size}" }
 
-            getReadyToUploadCopy()
-                .forEach { file ->
+            readyForUpload.forEach { file ->
                     log.info { "Uploading $file with ${sink::class.simpleName}" }
                     sink.upload(file)
                     log.info { "Uploaded $file" }
