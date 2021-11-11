@@ -76,7 +76,7 @@ class CSVHelper(private val fileDirectory: Path, fileOpenDuration: Duration, pri
 
         private fun createFileWriter(path: Path): Writer {
             return if (compress) {
-                BufferedWriter(OutputStreamWriter(GZIPOutputStream(Files.newOutputStream(path)), StandardCharsets.UTF_8), 65536)
+                OutputStreamWriter(GZIPOutputStream(Files.newOutputStream(path), 65536), StandardCharsets.UTF_8)
             } else {
                 Files.newBufferedWriter(path, StandardCharsets.UTF_8)
             }
