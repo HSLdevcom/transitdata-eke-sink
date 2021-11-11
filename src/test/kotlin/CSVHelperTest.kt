@@ -23,12 +23,22 @@ class CSVHelperTest {
 
     private lateinit var readyToUpload: MutableSet<Path>
 
+    private lateinit var compressedDirectory: Path
+    private lateinit var compressedCsvHelper: CSVHelper
+
+    private lateinit var compressedReadyToUpload: MutableSet<Path>
+
     @Before
     fun setup() {
         readyToUpload = mutableSetOf()
 
         directory = temporaryFolder.newFolder().toPath()
         csvHelper = CSVHelper(directory, Duration.ofSeconds(5), false, listOf("a", "b"), readyToUpload::add)
+
+        compressedReadyToUpload = mutableSetOf()
+
+        compressedDirectory = temporaryFolder.newFolder().toPath()
+        compressedCsvHelper = CSVHelper(compressedDirectory, Duration.ofSeconds(5), true, listOf("a", "b"), compressedReadyToUpload::add)
     }
 
     @ExperimentalPathApi
@@ -68,5 +78,17 @@ class CSVHelperTest {
         Thread.sleep(60 * 1000)
 
         assertEquals(1000, readyToUpload.size)
+    }
+
+    @Test
+    fun `Test with compression`() {
+        compressedCsvHelper.writeToCsv("test", listOf("1", "2"))
+        compressedCsvHelper.writeToCsv("test", listOf("1", "2"))
+        compressedCsvHelper.writeToCsv("test", listOf("1", "2"))
+
+        Thread.sleep(10000)
+
+        assertEquals(1, compressedReadyToUpload.size)
+        assertTrue(compressedReadyToUpload.contains(compressedDirectory.resolve("test.csv.gz")))
     }
 }
