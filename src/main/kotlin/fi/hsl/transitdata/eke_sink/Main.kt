@@ -2,7 +2,7 @@ package fi.hsl.transitdata.eke_sink
 
 import fi.hsl.common.config.ConfigParser
 import fi.hsl.common.pulsar.PulsarApplication
-import fi.hsl.transitdata.eke_sink.azure.AzureBlobClient
+import fi.hsl.transitdata.eke_sink.azure.BlobUploader
 import fi.hsl.transitdata.eke_sink.sink.AzureSink
 import fi.hsl.transitdata.eke_sink.sink.LocalSink
 import fi.hsl.transitdata.eke_sink.sink.Sink
@@ -12,13 +12,10 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.time.Duration
-import java.time.Instant
 import java.time.LocalDateTime
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 
-import java.time.temporal.ChronoUnit
-import kotlin.io.path.absolutePathString
 import kotlin.time.DurationUnit
 import kotlin.time.ExperimentalTime
 import kotlin.time.toDuration
@@ -56,7 +53,7 @@ fun main(vararg args: String) {
                 LocalSink(sinkDirectory, 50.toDuration(DurationUnit.MILLISECONDS), 50)
             } else {
                 log.info { "Using Azure sink for uploading files to Blob Storage" }
-                AzureSink(AzureBlobClient(config.getString("application.blobConnectionString"), config.getString("application.blobContainer")))
+                AzureSink(BlobUploader(config.getString("application.blobConnectionString"), config.getString("application.blobContainer")))
             }
 
             setupTaskToMoveFiles(
@@ -83,26 +80,20 @@ private fun setupTaskToMoveFiles(getReadyToUploadCopy: () -> List<Path>, removeF
 
     scheduler.scheduleWithFixedDelay({
         try {
-            log.info("Starting to upload files to Blob Storage")
+            val readyForUpload = getReadyToUploadCopy()
+            log.info{ "Starting to upload files to Blob Storage. Number of files to upload: ${readyForUpload.size}" }
 
-            getReadyToUploadCopy()
-                .forEach { uncompressed ->
-                    //GZIP file and upload to Azure Blob Storage
-                    log.debug { "Compressing $uncompressed with GZIP" }
-                    val compressed = gzip(uncompressed)
-                    log.debug { "Compressed $uncompressed to $compressed" }
+            readyForUpload.forEach { file ->
+                    log.info { "Uploading $file with ${sink::class.simpleName}" }
+                    sink.upload(file)
+                    log.info { "Uploaded $file" }
 
-                    log.info { "Uploading $compressed with ${sink::class.simpleName}" }
-                    sink.upload(compressed)
-                    log.info { "Uploaded $compressed" }
-
-                    //Delete files that have been uploaded to Azure
-                    Files.delete(uncompressed)
-                    Files.delete(compressed)
-
-                    removeFromUploadList(uncompressed)
-
-                    messageHandler.ackMessages(uncompressed)
+                    //Acknowledge messages that were written to the file
+                    messageHandler.ackMessages(file)
+                    //Delete the file from the disk
+                    Files.deleteIfExists(file)
+                    //Remove file from the upload list so that it won't be uploaded again
+                    removeFromUploadList(file)
                 }
 
             log.info("Done to uploading files to blob")

@@ -9,16 +9,20 @@ import org.apache.commons.pool2.PooledObject
 import org.apache.commons.pool2.impl.DefaultPooledObject
 import org.apache.commons.pool2.impl.GenericKeyedObjectPool
 import org.apache.commons.pool2.impl.GenericKeyedObjectPoolConfig
+import java.io.BufferedWriter
 import java.io.IOException
+import java.io.OutputStreamWriter
+import java.io.Writer
 import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 import java.nio.file.Path
 import java.time.Duration
+import java.util.zip.GZIPOutputStream
 
 /**
  * Helper for writing CSV files. Uses object pool to avoid reopening files for better performance.
  */
-class CSVHelper(private val fileDirectory: Path, fileOpenDuration: Duration, private val csvHeader: List<String>, addToUploadList: (Path) -> Unit) {
+class CSVHelper(private val fileDirectory: Path, fileOpenDuration: Duration, private val compress: Boolean, private val csvHeader: List<String>, addToUploadList: (Path) -> Unit) {
     init {
         if (!Files.isDirectory(fileDirectory)) {
             throw IllegalArgumentException("$fileDirectory is not directory")
@@ -35,7 +39,7 @@ class CSVHelper(private val fileDirectory: Path, fileOpenDuration: Duration, pri
 
         numTestsPerEvictionRun = 1000
     }
-    private val objectPool = CSVPrinterPool(PooledCSVPrinterFactory(csvHeader, addToUploadList), objectPoolConfig)
+    private val objectPool = CSVPrinterPool(PooledCSVPrinterFactory(csvHeader, compress, addToUploadList), objectPoolConfig)
 
     /**
      * Writes values to CSV file with specified name
@@ -50,7 +54,9 @@ class CSVHelper(private val fileDirectory: Path, fileOpenDuration: Duration, pri
             throw IllegalArgumentException("List contained different amount of values than CSV header (list: ${values.size}, header: ${csvHeader.size})")
         }
 
-        val csvFile = fileDirectory.resolve("$fileName.csv").toAbsolutePath()
+        val fullFileName = if (compress) { "$fileName.csv.gz" } else { "$fileName.csv" }
+
+        val csvFile = fileDirectory.resolve(fullFileName).toAbsolutePath()
         var csvPrinter: CSVPrinter? = null
         try {
             csvPrinter = objectPool.borrowObject(csvFile)
@@ -63,13 +69,20 @@ class CSVHelper(private val fileDirectory: Path, fileOpenDuration: Duration, pri
         return csvFile
     }
 
-
     private class CSVPrinterPool(factory: KeyedPooledObjectFactory<Path, CSVPrinter>, config: GenericKeyedObjectPoolConfig<CSVPrinter>) : GenericKeyedObjectPool<Path, CSVPrinter>(factory, config)
 
-    private class PooledCSVPrinterFactory(private val csvHeader: List<String>, private val addToUploadList: (Path) -> Unit) : BaseKeyedPooledObjectFactory<Path, CSVPrinter>() {
+    private class PooledCSVPrinterFactory(private val csvHeader: List<String>, private val compress: Boolean, private val addToUploadList: (Path) -> Unit) : BaseKeyedPooledObjectFactory<Path, CSVPrinter>() {
         private val log = KotlinLogging.logger {}
 
-        override fun create(key: Path): CSVPrinter = CSVPrinter(Files.newBufferedWriter(key, StandardCharsets.UTF_8), CSVFormat.RFC4180.withHeader(*csvHeader.toTypedArray()))
+        private fun createFileWriter(path: Path): Writer {
+            return if (compress) {
+                BufferedWriter(OutputStreamWriter(GZIPOutputStream(Files.newOutputStream(path)), StandardCharsets.UTF_8), 65536)
+            } else {
+                Files.newBufferedWriter(path, StandardCharsets.UTF_8)
+            }
+        }
+
+        override fun create(key: Path): CSVPrinter = CSVPrinter(createFileWriter(key), CSVFormat.RFC4180.withHeader(*csvHeader.toTypedArray()))
 
         override fun wrap(value: CSVPrinter): PooledObject<CSVPrinter> = DefaultPooledObject(value)
 
