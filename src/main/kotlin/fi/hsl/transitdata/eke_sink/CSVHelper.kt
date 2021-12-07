@@ -1,6 +1,8 @@
 package fi.hsl.transitdata.eke_sink
 
 import mu.KotlinLogging
+import org.apache.commons.compress.compressors.gzip.GzipCompressorOutputStream
+import org.apache.commons.compress.compressors.gzip.GzipParameters
 import org.apache.commons.csv.CSVFormat
 import org.apache.commons.csv.CSVPrinter
 import org.apache.commons.pool2.BaseKeyedPooledObjectFactory
@@ -9,7 +11,6 @@ import org.apache.commons.pool2.PooledObject
 import org.apache.commons.pool2.impl.DefaultPooledObject
 import org.apache.commons.pool2.impl.GenericKeyedObjectPool
 import org.apache.commons.pool2.impl.GenericKeyedObjectPoolConfig
-import java.io.BufferedWriter
 import java.io.IOException
 import java.io.OutputStreamWriter
 import java.io.Writer
@@ -17,7 +18,7 @@ import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 import java.nio.file.Path
 import java.time.Duration
-import java.util.zip.GZIPOutputStream
+import java.util.zip.Deflater
 
 /**
  * Helper for writing CSV files. Uses object pool to avoid reopening files for better performance.
@@ -76,7 +77,10 @@ class CSVHelper(private val fileDirectory: Path, fileOpenDuration: Duration, pri
 
         private fun createFileWriter(path: Path): Writer {
             return if (compress) {
-                OutputStreamWriter(GZIPOutputStream(Files.newOutputStream(path), 65536), StandardCharsets.UTF_8)
+                OutputStreamWriter(GzipCompressorOutputStream(Files.newOutputStream(path), GzipParameters().apply {
+                    compressionLevel = Deflater.BEST_COMPRESSION
+                    bufferSize = 65536
+                }), StandardCharsets.UTF_8)
             } else {
                 Files.newBufferedWriter(path, StandardCharsets.UTF_8)
             }
