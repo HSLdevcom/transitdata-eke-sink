@@ -62,7 +62,7 @@ class MessageHandler(context: PulsarApplicationContext, fileDirectory: Path, add
             }
 
             if (++handledMessages == LOG_THRESHOLD) {
-                log.info("Handled $LOG_THRESHOLD messages, everything seems fine")
+                log.info("Handled $LOG_THRESHOLD messages. Free memory: ${Runtime.getRuntime().freeMemory() / 1024 / 1024}MB")
                 handledMessages = 0
             }
         } catch (e: Exception) {
