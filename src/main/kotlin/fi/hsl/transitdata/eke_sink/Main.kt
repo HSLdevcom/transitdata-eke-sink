@@ -75,8 +75,12 @@ fun main(vararg args: String) {
 private fun setupTaskToMoveFiles(getReadyToUploadCopy: () -> List<Path>, removeFromUploadList: (Path) -> Unit, sink: Sink, messageHandler: MessageHandler){
     val scheduler = Executors.newSingleThreadScheduledExecutor(DaemonThreadFactory)
 
-    val nextHour = LocalDateTime.now().plusHours(1).withMinute(45)
-    val initialDelay = Duration.between(LocalDateTime.now(), nextHour)
+    val now = LocalDateTime.now()
+    var initialUploadTime = now.withMinute(45)
+    if (initialUploadTime.isBefore(now)) {
+        initialUploadTime = initialUploadTime.plusHours(1)
+    }
+    val initialDelay = Duration.between(now, initialUploadTime)
 
     scheduler.scheduleWithFixedDelay({
         try {
