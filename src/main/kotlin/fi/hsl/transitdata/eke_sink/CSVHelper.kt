@@ -35,7 +35,7 @@ class CSVHelper(private val fileDirectory: Path, fileOpenDuration: Duration, pri
         maxIdlePerKey = 1
         maxTotalPerKey = 1
 
-        timeBetweenEvictionRuns = fileOpenDuration.dividedBy(2)
+        timeBetweenEvictionRuns = fileOpenDuration.dividedBy(6)
         minEvictableIdleTime = fileOpenDuration //Max time to keep the file open
 
         numTestsPerEvictionRun = 1000
