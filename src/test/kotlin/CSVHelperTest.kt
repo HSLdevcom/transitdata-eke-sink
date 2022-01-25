@@ -1,4 +1,5 @@
 import fi.hsl.transitdata.eke_sink.CSVHelper
+import org.apache.commons.compress.compressors.gzip.GzipCompressorInputStream
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -10,9 +11,11 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.time.Duration
 import kotlin.io.path.ExperimentalPathApi
+import kotlin.io.path.inputStream
 import kotlin.io.path.readLines
 import kotlin.random.Random
 
+@ExperimentalPathApi
 class CSVHelperTest {
     @Rule
     @JvmField
@@ -88,7 +91,15 @@ class CSVHelperTest {
 
         Thread.sleep(10000)
 
+        val file = compressedDirectory.resolve("test.csv.gz")
+
         assertEquals(1, compressedReadyToUpload.size)
-        assertTrue(compressedReadyToUpload.contains(compressedDirectory.resolve("test.csv.gz")))
+        assertTrue(compressedReadyToUpload.contains(file))
+
+        val lines = file.inputStream().use {
+            GzipCompressorInputStream(it).bufferedReader(StandardCharsets.UTF_8).readLines()
+        }
+
+        assertEquals(4, lines.size)
     }
 }
