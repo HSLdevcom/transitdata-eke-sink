@@ -75,8 +75,12 @@ fun main(vararg args: String) {
 private fun setupTaskToMoveFiles(getReadyToUploadCopy: () -> List<Path>, removeFromUploadList: (Path) -> Unit, sink: Sink, messageHandler: MessageHandler){
     val scheduler = Executors.newSingleThreadScheduledExecutor(DaemonThreadFactory)
 
-    val nextHour = LocalDateTime.now().plusHours(1).withMinute(45)
-    val initialDelay = Duration.between(LocalDateTime.now(), nextHour)
+    val now = LocalDateTime.now()
+    var initialUploadTime = now.withMinute(45)
+    if (initialUploadTime.isBefore(now)) {
+        initialUploadTime = initialUploadTime.plusHours(1)
+    }
+    val initialDelay = Duration.between(now, initialUploadTime)
 
     scheduler.scheduleWithFixedDelay({
         try {
@@ -84,6 +88,11 @@ private fun setupTaskToMoveFiles(getReadyToUploadCopy: () -> List<Path>, removeF
             log.info{ "Starting to upload files to Blob Storage. Number of files to upload: ${readyForUpload.size}" }
 
             readyForUpload.forEach { file ->
+                    if (Files.notExists(file)) {
+                        log.warn { "$file does not exist! Skipping upload.." }
+                        return@forEach
+                    }
+
                     log.info { "Uploading $file with ${sink::class.simpleName}" }
                     sink.upload(file)
                     log.info { "Uploaded $file" }
@@ -91,7 +100,7 @@ private fun setupTaskToMoveFiles(getReadyToUploadCopy: () -> List<Path>, removeF
                     //Acknowledge messages that were written to the file
                     messageHandler.ackMessages(file)
                     //Delete the file from the disk
-                    Files.deleteIfExists(file)
+                    deleteSafely(file)
                     //Remove file from the upload list so that it won't be uploaded again
                     removeFromUploadList(file)
                 }
@@ -101,4 +110,16 @@ private fun setupTaskToMoveFiles(getReadyToUploadCopy: () -> List<Path>, removeF
             log.error("Something went wrong while moving the files to blob", t)
         }
     }, initialDelay.toMinutes() ,60, TimeUnit.MINUTES)
+}
+
+/**
+ * Deletes file at the specified path without throwing any exceptions. If the file cannot be deleted for some reason, the behaviour of this function is unspecified
+ */
+private fun deleteSafely(path: Path) {
+    try {
+        Files.deleteIfExists(path)
+    } catch (e: Exception) {
+        //TODO: swallowing exception can cause the disk to be filled up. Maybe add timer to delete files that have not been modified in a long time?
+        log.warn(e) { "Failed to delete file $path" }
+    }
 }

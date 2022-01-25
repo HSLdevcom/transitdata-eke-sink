@@ -1,6 +1,8 @@
 package fi.hsl.transitdata.eke_sink
 
 import mu.KotlinLogging
+import org.apache.commons.compress.compressors.gzip.GzipCompressorOutputStream
+import org.apache.commons.compress.compressors.gzip.GzipParameters
 import org.apache.commons.csv.CSVFormat
 import org.apache.commons.csv.CSVPrinter
 import org.apache.commons.pool2.BaseKeyedPooledObjectFactory
@@ -9,7 +11,6 @@ import org.apache.commons.pool2.PooledObject
 import org.apache.commons.pool2.impl.DefaultPooledObject
 import org.apache.commons.pool2.impl.GenericKeyedObjectPool
 import org.apache.commons.pool2.impl.GenericKeyedObjectPoolConfig
-import java.io.BufferedWriter
 import java.io.IOException
 import java.io.OutputStreamWriter
 import java.io.Writer
@@ -17,7 +18,8 @@ import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 import java.nio.file.Path
 import java.time.Duration
-import java.util.zip.GZIPOutputStream
+import java.util.concurrent.atomic.AtomicInteger
+import java.util.zip.Deflater
 
 /**
  * Helper for writing CSV files. Uses object pool to avoid reopening files for better performance.
@@ -34,12 +36,15 @@ class CSVHelper(private val fileDirectory: Path, fileOpenDuration: Duration, pri
         maxIdlePerKey = 1
         maxTotalPerKey = 1
 
-        timeBetweenEvictionRuns = fileOpenDuration.dividedBy(2)
+        timeBetweenEvictionRuns = fileOpenDuration.dividedBy(6)
         minEvictableIdleTime = fileOpenDuration //Max time to keep the file open
-
         numTestsPerEvictionRun = 1000
     }
-    private val objectPool = CSVPrinterPool(PooledCSVPrinterFactory(csvHeader, compress, addToUploadList), objectPoolConfig)
+    private val objectFactory = PooledCSVPrinterFactory(csvHeader, compress, addToUploadList)
+    private val objectPool = CSVPrinterPool(objectFactory, objectPoolConfig)
+
+    val openFiles: Int
+        get() = objectFactory.openFiles
 
     /**
      * Writes values to CSV file with specified name
@@ -74,15 +79,26 @@ class CSVHelper(private val fileDirectory: Path, fileOpenDuration: Duration, pri
     private class PooledCSVPrinterFactory(private val csvHeader: List<String>, private val compress: Boolean, private val addToUploadList: (Path) -> Unit) : BaseKeyedPooledObjectFactory<Path, CSVPrinter>() {
         private val log = KotlinLogging.logger {}
 
+        private var _openFiles = AtomicInteger(0)
+
+        val openFiles: Int
+            get() = _openFiles.get()
+
         private fun createFileWriter(path: Path): Writer {
             return if (compress) {
-                OutputStreamWriter(GZIPOutputStream(Files.newOutputStream(path), 65536), StandardCharsets.UTF_8)
+                OutputStreamWriter(GzipCompressorOutputStream(Files.newOutputStream(path), GzipParameters().apply {
+                    compressionLevel = Deflater.BEST_COMPRESSION
+                    bufferSize = 65536
+                }), StandardCharsets.UTF_8)
             } else {
                 Files.newBufferedWriter(path, StandardCharsets.UTF_8)
             }
         }
 
-        override fun create(key: Path): CSVPrinter = CSVPrinter(createFileWriter(key), CSVFormat.RFC4180.withHeader(*csvHeader.toTypedArray()))
+        override fun create(key: Path): CSVPrinter {
+            _openFiles.incrementAndGet()
+            return CSVPrinter(createFileWriter(key), CSVFormat.RFC4180.withHeader(*csvHeader.toTypedArray()))
+        }
 
         override fun wrap(value: CSVPrinter): PooledObject<CSVPrinter> = DefaultPooledObject(value)
 
@@ -94,6 +110,8 @@ class CSVHelper(private val fileDirectory: Path, fileOpenDuration: Duration, pri
                 p.`object`.close(true)
 
                 addToUploadList(key)
+
+                _openFiles.decrementAndGet()
             } catch (ioe: IOException) {
                 log.error(ioe) { "Failed to close file writer for $key" }
             }
