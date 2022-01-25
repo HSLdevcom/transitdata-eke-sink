@@ -18,6 +18,7 @@ import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 import java.nio.file.Path
 import java.time.Duration
+import java.util.concurrent.atomic.AtomicInteger
 import java.util.zip.Deflater
 
 /**
@@ -37,10 +38,13 @@ class CSVHelper(private val fileDirectory: Path, fileOpenDuration: Duration, pri
 
         timeBetweenEvictionRuns = fileOpenDuration.dividedBy(6)
         minEvictableIdleTime = fileOpenDuration //Max time to keep the file open
-
         numTestsPerEvictionRun = 1000
     }
-    private val objectPool = CSVPrinterPool(PooledCSVPrinterFactory(csvHeader, compress, addToUploadList), objectPoolConfig)
+    private val objectFactory = PooledCSVPrinterFactory(csvHeader, compress, addToUploadList)
+    private val objectPool = CSVPrinterPool(objectFactory, objectPoolConfig)
+
+    val openFiles: Int
+        get() = objectFactory.openFiles
 
     /**
      * Writes values to CSV file with specified name
@@ -75,6 +79,11 @@ class CSVHelper(private val fileDirectory: Path, fileOpenDuration: Duration, pri
     private class PooledCSVPrinterFactory(private val csvHeader: List<String>, private val compress: Boolean, private val addToUploadList: (Path) -> Unit) : BaseKeyedPooledObjectFactory<Path, CSVPrinter>() {
         private val log = KotlinLogging.logger {}
 
+        private var _openFiles = AtomicInteger(0)
+
+        val openFiles: Int
+            get() = _openFiles.get()
+
         private fun createFileWriter(path: Path): Writer {
             return if (compress) {
                 OutputStreamWriter(GzipCompressorOutputStream(Files.newOutputStream(path), GzipParameters().apply {
@@ -86,7 +95,10 @@ class CSVHelper(private val fileDirectory: Path, fileOpenDuration: Duration, pri
             }
         }
 
-        override fun create(key: Path): CSVPrinter = CSVPrinter(createFileWriter(key), CSVFormat.RFC4180.withHeader(*csvHeader.toTypedArray()))
+        override fun create(key: Path): CSVPrinter {
+            _openFiles.incrementAndGet()
+            return CSVPrinter(createFileWriter(key), CSVFormat.RFC4180.withHeader(*csvHeader.toTypedArray()))
+        }
 
         override fun wrap(value: CSVPrinter): PooledObject<CSVPrinter> = DefaultPooledObject(value)
 
@@ -98,6 +110,8 @@ class CSVHelper(private val fileDirectory: Path, fileOpenDuration: Duration, pri
                 p.`object`.close(true)
 
                 addToUploadList(key)
+
+                _openFiles.decrementAndGet()
             } catch (ioe: IOException) {
                 log.error(ioe) { "Failed to close file writer for $key" }
             }
