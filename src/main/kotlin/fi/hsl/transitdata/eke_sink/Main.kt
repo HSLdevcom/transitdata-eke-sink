@@ -82,7 +82,7 @@ private fun setupTaskToMoveFiles(getReadyToUploadCopy: () -> List<Path>, removeF
     }
     val initialDelay = Duration.between(now, initialUploadTime)
 
-    scheduler.scheduleWithFixedDelay({
+    scheduler.scheduleAtFixedRate({
         try {
             val readyForUpload = getReadyToUploadCopy()
             log.info{ "Starting to upload files to Blob Storage. Number of files to upload: ${readyForUpload.size}" }
