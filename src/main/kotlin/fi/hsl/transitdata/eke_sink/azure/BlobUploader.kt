@@ -4,9 +4,15 @@ import com.azure.storage.blob.BlobContainerClient
 import com.azure.storage.blob.BlobServiceClient
 import com.azure.storage.blob.BlobServiceClientBuilder
 import mu.KotlinLogging
+import java.io.BufferedOutputStream
+import java.nio.file.Files
 import java.nio.file.Path
 
 class BlobUploader(connectionString: String, container: String) {
+    companion object {
+        private const val BUFFER_SIZE = 65536
+    }
+
     private val log = KotlinLogging.logger { }
 
     private val blobServiceClient: BlobServiceClient = BlobServiceClientBuilder().connectionString(connectionString).buildClient()
@@ -23,6 +29,9 @@ class BlobUploader(connectionString: String, container: String) {
             log.warn { "Warning! Blob ${blobClient.blobName} already exists and will be overwritten" }
         }
 
-        blobClient.uploadFromFile(path.toAbsolutePath().toString(), true)
+        val outputStream = BufferedOutputStream(blobClient.blockBlobClient.getBlobOutputStream(true), BUFFER_SIZE)
+        outputStream.use {
+            Files.copy(path, it)
+        }
     }
 }
