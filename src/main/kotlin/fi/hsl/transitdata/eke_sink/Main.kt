@@ -88,14 +88,13 @@ private fun setupTaskToMoveFiles(getReadyToUploadCopy: () -> List<Path>, removeF
             log.info{ "Starting to upload files to Blob Storage. Number of files to upload: ${readyForUpload.size}" }
 
             readyForUpload.forEach { file ->
-                    if (Files.notExists(file)) {
+                    if (Files.exists(file)) {
+                        log.info { "Uploading $file with ${sink::class.simpleName}" }
+                        sink.upload(file)
+                        log.info { "Uploaded $file" }
+                    } else {
                         log.warn { "$file does not exist! Skipping upload.." }
-                        return@forEach
                     }
-
-                    log.info { "Uploading $file with ${sink::class.simpleName}" }
-                    sink.upload(file)
-                    log.info { "Uploaded $file" }
 
                     //Acknowledge messages that were written to the file
                     messageHandler.ackMessages(file)
