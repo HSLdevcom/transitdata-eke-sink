@@ -6,7 +6,9 @@ import com.nhaarman.mockitokotlin2.mock
 import com.typesafe.config.Config
 import fi.hsl.common.mqtt.proto.Mqtt
 import fi.hsl.common.pulsar.PulsarApplicationContext
+import fi.hsl.transitdata.eke_sink.CsvService
 import fi.hsl.transitdata.eke_sink.MessageHandler
+import fi.hsl.transitdata.eke_sink.sink.LocalSink
 import org.apache.pulsar.client.api.*
 import org.bouncycastle.asn1.iana.IANAObjectIdentifiers.directory
 import org.junit.Assert.assertEquals
@@ -20,12 +22,15 @@ import java.io.File
 import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 import java.nio.file.Paths
+import java.time.Duration
 import java.util.*
 import java.util.concurrent.CompletableFuture
 import kotlin.io.path.exists
 import kotlin.random.Random
 import kotlin.streams.toList
+import kotlin.time.ExperimentalTime
 
+@ExperimentalTime
 class MessageHandlerTest {
     @Rule
     @JvmField val temp = TemporaryFolder()
@@ -61,20 +66,24 @@ class MessageHandlerTest {
             Files.createDirectories(directory)
         }
 
-        val handler = MessageHandler(mockContext, directory, {})
+        val uploadDirectory = temp.newFolder("blobstorage").toPath()
+        if (Files.notExists(uploadDirectory)) {
+            Files.createDirectories(uploadDirectory)
+        }
+
+        val handler = MessageHandler(mockContext, CsvService(directory, LocalSink(uploadDirectory), mockConsumer::acknowledgeAsync, uploadAfterNotModified = Duration.ofSeconds(1), tryUploadInterval = Duration.ofSeconds(2)))
         handler.handleMessage(mock<Message<Any>> {
             on { data } doAnswer { Mqtt.RawMessage.newBuilder().setPayload(ByteString.copyFrom(getMessageContent())).setTopic("eke/v1/sm5/15/A/stadlerUDP").setSchemaVersion(1).build().toByteArray() }
             on { properties } doReturn(Collections.singletonMap(fi.hsl.common.transitdata.TransitdataProperties.KEY_SOURCE_MESSAGE_TIMESTAMP_MS, java.time.Instant.now().toEpochMilli().toString()))
             on { messageId } doReturn(mock<MessageId>())
         })
 
-        Thread.sleep(1000)
+        Thread.sleep(5000)
 
-        val directoryContent = Files.list(directory).toList()
+        val directoryContent = Files.list(uploadDirectory).toList()
         //There should be one file
         assertEquals(1, directoryContent.size)
 
-        handler.ackMessages(Files.list(directory).findAny().get().toAbsolutePath())
         Mockito.verify(mockConsumer, Mockito.times(1)).acknowledgeAsync(any<MessageId>())
     }
 

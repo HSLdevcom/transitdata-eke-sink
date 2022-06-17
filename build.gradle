@@ -66,7 +66,6 @@ dependencies {
     implementation 'io.netty:netty-tcnative-boringssl-static:2.0.53.Final'
 
     implementation 'org.apache.commons:commons-csv:1.9.0'
-    implementation 'org.apache.commons:commons-pool2:2.11.1'
     implementation "org.apache.commons:commons-compress:1.21"
     implementation "commons-codec:commons-codec:1.15"
 
