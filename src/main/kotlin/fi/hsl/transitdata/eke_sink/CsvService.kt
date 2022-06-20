@@ -39,7 +39,7 @@ class CsvService(private val fileDirectory: Path, sink: Sink, private val msgAck
             for ((key, csvFile) in readyForUpload) {
                 //Upload to blob storage
                 log.info { "Uploading ${csvFile.path} with ${sink::class.simpleName}" }
-                sink.upload(csvFile.path)
+                sink.upload(csvFile.path, csvFile.getTags())
                 log.info { "Uploaded ${csvFile.path}" }
 
                 //Acknowledge messages
