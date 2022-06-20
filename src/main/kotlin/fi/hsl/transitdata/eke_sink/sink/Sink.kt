@@ -4,5 +4,5 @@ import java.nio.file.Path
 
 interface Sink {
     @Throws(Exception::class)
-    fun upload(file: Path)
+    fun upload(file: Path, tags: Map<String, String>)
 }

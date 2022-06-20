@@ -18,10 +18,10 @@ import kotlin.time.measureTime
 class LocalSink(private val outputDirectory: Path, private val delay: Duration = Duration.ZERO, private val maxFiles: Int = -1) : Sink {
     private val log = KotlinLogging.logger {}
 
-    override fun upload(file: Path) {
+    override fun upload(file: Path, tags: Map<String, String>) {
         val elapsedTime = measureTime {
             val destination = outputDirectory.resolve(file.fileName)
-            log.info { "Copying $file to $destination" }
+            log.info { "Copying $file to $destination, tags: $tags" }
             Files.copy(file, destination)
         }
         //Sleep for the remaining time
