@@ -35,7 +35,6 @@ class MessageHandlerTest {
     @Rule
     @JvmField val temp = TemporaryFolder()
 
-    lateinit var mockContext: PulsarApplicationContext
     lateinit var mockConsumer: Consumer<ByteArray>
     lateinit var mockMessage : TypedMessageBuilder<ByteArray>
 
@@ -49,13 +48,6 @@ class MessageHandlerTest {
             on { sendAsync() } doReturn (CompletableFuture<MessageId>())
             on { property(any<String>(), any<String>()) } doReturn (it)
             on { value(any<ByteArray>()) } doReturn(it)
-        }
-        val mockConfig = mock<Config> {
-            on { getBoolean(any()) } doReturn(false)
-        }
-        mockContext = mock<PulsarApplicationContext>{
-            on { consumer } doReturn (mockConsumer)
-            on { config } doReturn(mockConfig)
         }
     }
 
@@ -71,7 +63,7 @@ class MessageHandlerTest {
             Files.createDirectories(uploadDirectory)
         }
 
-        val handler = MessageHandler(mockContext, CsvService(directory, LocalSink(uploadDirectory), mockConsumer::acknowledgeAsync, uploadAfterNotModified = Duration.ofSeconds(1), tryUploadInterval = Duration.ofSeconds(2)))
+        val handler = MessageHandler(CsvService(directory, LocalSink(uploadDirectory), mockConsumer::acknowledgeAsync, uploadAfterNotModified = Duration.ofSeconds(1), tryUploadInterval = Duration.ofSeconds(2)))
         handler.handleMessage(mock<Message<Any>> {
             on { data } doAnswer { Mqtt.RawMessage.newBuilder().setPayload(ByteString.copyFrom(getMessageContent())).setTopic("eke/v1/sm5/15/A/stadlerUDP").setSchemaVersion(1).build().toByteArray() }
             on { properties } doReturn(Collections.singletonMap(fi.hsl.common.transitdata.TransitdataProperties.KEY_SOURCE_MESSAGE_TIMESTAMP_MS, java.time.Instant.now().toEpochMilli().toString()))

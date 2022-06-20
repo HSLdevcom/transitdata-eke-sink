@@ -51,7 +51,7 @@ fun main(vararg args: String) {
             }
             val csvService = CsvService(dataDirectory, sink, ::ack, Duration.ofMinutes(15))
 
-            val messageHandler = MessageHandler(context, csvService)
+            val messageHandler = MessageHandler(csvService)
 
             app.launchWithHandler(messageHandler)
         }
