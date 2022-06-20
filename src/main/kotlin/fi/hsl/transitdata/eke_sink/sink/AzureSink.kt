@@ -8,6 +8,6 @@ import java.nio.file.Path
  */
 class AzureSink(private val blobUploader: BlobUploader): Sink {
     override fun upload(file: Path, tags: Map<String, String>) {
-        blobUploader.uploadFromFile(file)
+        blobUploader.uploadFromFile(file, tags)
     }
 }
