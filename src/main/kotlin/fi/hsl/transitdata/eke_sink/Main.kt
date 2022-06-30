@@ -41,6 +41,8 @@ fun main(vararg args: String) {
                 AzureSink(BlobUploader(config.getString("application.blobConnectionString"), config.getString("application.blobContainer")))
             }
 
+            val uploadAfterNotModified = config.getDuration("application.uploadAfterNotModified")
+
             fun ack(msgId: MessageId) {
                 context.consumer!!.acknowledgeAsync(msgId)
                     .exceptionally { throwable ->
@@ -49,7 +51,7 @@ fun main(vararg args: String) {
                     }
                     .thenRun {}
             }
-            val csvService = CsvService(dataDirectory, sink, ::ack, Duration.ofMinutes(15))
+            val csvService = CsvService(dataDirectory, sink, ::ack, uploadAfterNotModified)
 
             val messageHandler = MessageHandler(csvService)
 
