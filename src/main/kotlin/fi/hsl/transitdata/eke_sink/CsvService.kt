@@ -21,7 +21,13 @@ import java.util.concurrent.TimeUnit
 
 private val log = KotlinLogging.logger {}
 
-class CsvService(private val fileDirectory: Path, sink: Sink, private val msgAcknowledger: (MessageId) -> Unit, uploadAfterNotModified: Duration, tryUploadInterval: Duration = Duration.ofMinutes(5)) {
+class CsvService(
+    private val fileDirectory: Path,
+    sink: Sink,
+    private val msgAcknowledger: (MessageId) -> Unit,
+    uploadAfterNotModified: Duration,
+    tryUploadInterval: Duration = minOf(Duration.ofMinutes(5), uploadAfterNotModified.multipliedBy(2))
+) {
     companion object {
         private const val TOPIC_PREFIX = "eke/v1/sm5/"
     }
