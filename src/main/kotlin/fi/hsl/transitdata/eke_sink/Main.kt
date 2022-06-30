@@ -32,7 +32,9 @@ fun main(vararg args: String) {
 
             val sinkType = config.getString("application.sink")
             val sink = if (sinkType == "local") {
-                val sinkDirectory = Files.createTempDirectory("eke")
+                val path = config.getString("application.localSinkPath")
+
+                val sinkDirectory = if (path.isNullOrBlank()) { Files.createTempDirectory("eke") } else { Paths.get(path) }
                 log.info { "Using local sink for copying files to local filesystem (${sinkDirectory.toAbsolutePath()})" }
                 //TODO: these parameters could be configurable
                 LocalSink(sinkDirectory, 50.toDuration(DurationUnit.MILLISECONDS), 50)
