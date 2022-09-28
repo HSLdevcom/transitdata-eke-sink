@@ -13,7 +13,7 @@ plugins {
 }
 
 group 'fi.hsl'
-version '1.1.0'
+version '1.1.1'
 
 repositories {
     mavenCentral()
@@ -73,11 +73,11 @@ dependencies {
 }
 
 compileKotlin {
-    kotlinOptions.jvmTarget = "1.8"
+    kotlinOptions.jvmTarget = JavaVersion.VERSION_11
     kotlinOptions {
         languageVersion = "1.4"
     }
 }
 compileTestKotlin {
-    kotlinOptions.jvmTarget = "1.8"
+    kotlinOptions.jvmTarget = JavaVersion.VERSION_11
 }

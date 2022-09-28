@@ -32,7 +32,9 @@ fun main(vararg args: String) {
 
             val sinkType = config.getString("application.sink")
             val sink = if (sinkType == "local") {
-                val sinkDirectory = Files.createTempDirectory("eke")
+                val path = config.getString("application.localSinkPath")
+
+                val sinkDirectory = if (path.isNullOrBlank()) { Files.createTempDirectory("eke") } else { Paths.get(path) }
                 log.info { "Using local sink for copying files to local filesystem (${sinkDirectory.toAbsolutePath()})" }
                 //TODO: these parameters could be configurable
                 LocalSink(sinkDirectory, 50.toDuration(DurationUnit.MILLISECONDS), 50)
@@ -40,6 +42,8 @@ fun main(vararg args: String) {
                 log.info { "Using Azure sink for uploading files to Blob Storage" }
                 AzureSink(BlobUploader(config.getString("application.blobConnectionString"), config.getString("application.blobContainer")))
             }
+
+            val uploadAfterNotModified = config.getDuration("application.uploadAfterNotModified")
 
             fun ack(msgId: MessageId) {
                 context.consumer!!.acknowledgeAsync(msgId)
@@ -49,7 +53,7 @@ fun main(vararg args: String) {
                     }
                     .thenRun {}
             }
-            val csvService = CsvService(dataDirectory, sink, ::ack, Duration.ofMinutes(15))
+            val csvService = CsvService(dataDirectory, sink, ::ack, uploadAfterNotModified)
 
             val messageHandler = MessageHandler(csvService)
 
