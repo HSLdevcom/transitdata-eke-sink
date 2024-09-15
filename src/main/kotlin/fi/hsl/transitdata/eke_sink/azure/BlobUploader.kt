@@ -23,7 +23,7 @@ class BlobUploader(connectionString: String, container: String) {
         blobServiceClient.createBlobContainer(container)
     }
 
-    fun uploadFromFile(path: Path, tags: Map<String, String>) {
+    fun uploadFromFile(path: Path, tags: Map<String, String>? = null): String {
         val blobClient = blobContainerClient.getBlobClient(path.fileName.toString())
         if (blobClient.exists()) {
             log.warn { "Warning! Blob ${blobClient.blobName} already exists and will be overwritten" }
@@ -33,6 +33,10 @@ class BlobUploader(connectionString: String, container: String) {
         outputStream.use {
             Files.copy(path, it)
         }
-        blobClient.tags = tags
+        if (!tags.isNullOrEmpty()) {
+            blobClient.tags = tags
+        }
+
+        return blobClient.blobName
     }
 }
