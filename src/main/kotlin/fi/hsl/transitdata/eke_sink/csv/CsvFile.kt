@@ -37,7 +37,7 @@ class CsvFile(val path: Path, private val unitNumber: String, csvHeader: List<St
             compressionLevel = Deflater.BEST_COMPRESSION
             bufferSize = WRITE_BUFFER_SIZE
         }), StandardCharsets.UTF_8),
-        CSVFormat.RFC4180.withHeader(*csvHeader.toTypedArray())
+        CSVFormat.RFC4180.builder().setHeader(*csvHeader.toTypedArray()).build()
     )
     private var open: Boolean = true
     private var lastModified: Long = System.nanoTime()
