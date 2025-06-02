@@ -45,21 +45,27 @@ class CsvService(
             for ((key, csvFile) in readyForUpload) {
                 //Upload to blob storage
                 log.info { "Uploading ${csvFile.path} with ${sink::class.simpleName}" }
-                sink.upload(csvFile.path, csvFile.getTags())
-                log.info { "Uploaded ${csvFile.path}" }
+                try {
+                    sink.upload(csvFile.path, csvFile.getTags())
+                    log.info { "Uploaded ${csvFile.path}" }
 
-                //Acknowledge messages
-                val msgIds = msgIdsByPath[csvFile.path] ?: emptyList()
-                log.info { "Acknowledging ${msgIds.size} messages which were written to ${csvFile.path}" }
-                for (msgId in msgIds) {
-                    msgAcknowledger(msgId)
+                    //Acknowledge messages
+                    val msgIds = msgIdsByPath[csvFile.path] ?: emptyList()
+                    log.info { "Acknowledging ${msgIds.size} messages which were written to ${csvFile.path}" }
+                    for (msgId in msgIds) {
+                        msgAcknowledger(msgId)
+                    }
+
+                    //Delete file
+                    deleteSafely(csvFile.path)
+
+                    csvFiles.remove(key)
+                    msgIdsByPath.remove(csvFile.path)
+                } catch (e: Exception) {
+                    log.error(e) { "Failed to upload ${csvFile.path} with ${sink::class.simpleName}" }
+                    //If upload fails, we don't remove the file from the map, so it will be retried later
+                    continue
                 }
-
-                //Delete file
-                deleteSafely(csvFile.path)
-
-                csvFiles.remove(key)
-                msgIdsByPath.remove(csvFile.path)
             }
         }, tryUploadInterval.seconds, tryUploadInterval.seconds, TimeUnit.SECONDS) //TODO: allow changing these values
     }
