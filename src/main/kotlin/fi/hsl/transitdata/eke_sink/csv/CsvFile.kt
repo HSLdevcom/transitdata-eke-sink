@@ -20,6 +20,16 @@ private val log = KotlinLogging.logger {}
 class CsvFile(val path: Path, private val unitNumber: String, csvHeader: List<String>) : Closeable {
     companion object {
         private const val WRITE_BUFFER_SIZE = 65536
+        private const val REPLACEMENT_CHAR = "_"
+        private val invalidChars = Regex("[^a-zA-Z0-9 +\\-./:=_]")
+        fun sanitizeTags(tags: Map<String, String>): Map<String, String> =
+            tags.asSequence()
+                .mapNotNull { (key, value) ->
+                    val sanitizedKey = key.replace(invalidChars, REPLACEMENT_CHAR).take(128)
+                    val sanitizedValue = value.replace(invalidChars, REPLACEMENT_CHAR).take(256)
+                    if (sanitizedKey.isNotEmpty()) sanitizedKey to sanitizedValue else null
+                }
+                .toMap()
     }
 
     private var csvPrinter: CSVPrinter? = CSVPrinter(
@@ -27,7 +37,7 @@ class CsvFile(val path: Path, private val unitNumber: String, csvHeader: List<St
             compressionLevel = Deflater.BEST_COMPRESSION
             bufferSize = WRITE_BUFFER_SIZE
         }), StandardCharsets.UTF_8),
-        CSVFormat.RFC4180.withHeader(*csvHeader.toTypedArray())
+        CSVFormat.RFC4180.builder().setHeader(*csvHeader.toTypedArray()).build()
     )
     private var open: Boolean = true
     private var lastModified: Long = System.nanoTime()
@@ -60,8 +70,7 @@ class CsvFile(val path: Path, private val unitNumber: String, csvHeader: List<St
         tags["row_count"] = rowCount.toString()
         minNtpTime?.format(DateTimeFormatter.ISO_OFFSET_DATE_TIME)?.let { tags["min_ntp_timestamp"] = it }
         maxNtpTime?.format(DateTimeFormatter.ISO_OFFSET_DATE_TIME)?.let { tags["max_ntp_timestamp"] = it }
-
-        return tags.toMap()
+        return CsvFile.sanitizeTags(tags)
     }
 
     fun getLastModifiedAgo(): Duration = Duration.ofNanos(System.nanoTime() - lastModified)
