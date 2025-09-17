@@ -17,18 +17,21 @@ data class MqttHeader(
     val ekeTime: Int,
     val ekeTimeHundredsOfSecond: Int,
     val ntpTime: Int,
-    val ntpTimeHundredsOfSecond: Int) {
+    val ntpTimeHundredsOfSecond: Int
+) {
 
     companion object {
         fun parseFromByteArray(byteArray: ByteArray): MqttHeader {
             /**
              * 5 bit message type | 10 bit version | 1 bit ntp timestamp valid = total 16 bit
-             * 32bit + 8 bit capture timestamp (eke time) unixtime + hundreds of second
-             * 32bit + 8 bit capture timestamp corrected with ntp time difference (ntp time) unixtime + hundreds of second
-             * (header total length 12 bytes)
+             * 32bit + 8 bit capture timestamp (eke time) unixtime + hundreds of second 32bit + 8
+             * bit capture timestamp corrected with ntp time difference (ntp time) unixtime +
+             * hundreds of second (header total length 12 bytes)
              */
             if (byteArray.size < 12) {
-                throw IllegalArgumentException("Byte array that contains the header must be at least 12 bytes long")
+                throw IllegalArgumentException(
+                    "Byte array that contains the header must be at least 12 bytes long"
+                )
             }
 
             val header = byteArray.copyOf(12)
@@ -44,18 +47,27 @@ data class MqttHeader(
             val ntpTime = bytesToInt(fixSize(header.copyOfRange(7, 11)))
             val ntpTimeHundredsOfSecond = bytesToInt((fixSize(header.copyOfRange(11, 12))))
 
-            return MqttHeader(messageType, version, ntpValid, ekeTime, ekeTimeHundredsOfSecond, ntpTime, ntpTimeHundredsOfSecond)
+            return MqttHeader(
+                messageType,
+                version,
+                ntpValid,
+                ekeTime,
+                ekeTimeHundredsOfSecond,
+                ntpTime,
+                ntpTimeHundredsOfSecond
+            )
         }
 
         private fun bytesToInt(bytes: ByteArray): Int {
-            return (bytes[0].toInt() shl 24) or (bytes[1].toInt() and 0xFF shl 16) or (bytes[2].toInt() and 0xFF shl 8) or (bytes[3].toInt() and 0xFF)
+            return (bytes[0].toInt() shl 24) or
+                (bytes[1].toInt() and 0xFF shl 16) or
+                (bytes[2].toInt() and 0xFF shl 8) or
+                (bytes[3].toInt() and 0xFF)
         }
 
-        /**
-         * Changes byte array size to (at least) 4 bytes so that it can be parsed as int
-         */
+        /** Changes byte array size to (at least) 4 bytes so that it can be parsed as int */
         private fun fixSize(byteArray: ByteArray): ByteArray {
-            val size = max(0, min(4,4 - byteArray.size))
+            val size = max(0, min(4, 4 - byteArray.size))
             val zeroFilled = ByteArray(size)
             zeroFilled.fill(0)
 
@@ -63,19 +75,17 @@ data class MqttHeader(
         }
     }
 
-    /**
-     * EKE time, calculated from ekeTime and ekeTimeHundredsOfSecond
-     */
-    val ekeTimeExact: ZonedDateTime = Instant.ofEpochSecond(ekeTime.toLong())
-        .plusMillis(ekeTimeHundredsOfSecond * 10L)
-        .atZone(ZoneId.of("UTC"))
-        .withZoneSameLocal(ZoneId.of("Europe/Helsinki"))
+    /** EKE time, calculated from ekeTime and ekeTimeHundredsOfSecond */
+    val ekeTimeExact: ZonedDateTime =
+        Instant.ofEpochSecond(ekeTime.toLong())
+            .plusMillis(ekeTimeHundredsOfSecond * 10L)
+            .atZone(ZoneId.of("UTC"))
+            .withZoneSameLocal(ZoneId.of("Europe/Helsinki"))
 
-    /**
-     * NTP time, calculated from ntpTime and ntpTimeHundredsOfSecond
-     */
-    val ntpTimeExact: ZonedDateTime = Instant.ofEpochSecond(ntpTime.toLong())
-        .plusMillis(ntpTimeHundredsOfSecond * 10L)
-        .atZone(ZoneId.of("Europe/Helsinki"))
-        .withZoneSameInstant(ZoneId.of("UTC"))
+    /** NTP time, calculated from ntpTime and ntpTimeHundredsOfSecond */
+    val ntpTimeExact: ZonedDateTime =
+        Instant.ofEpochSecond(ntpTime.toLong())
+            .plusMillis(ntpTimeHundredsOfSecond * 10L)
+            .atZone(ZoneId.of("Europe/Helsinki"))
+            .withZoneSameInstant(ZoneId.of("UTC"))
 }
