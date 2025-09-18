@@ -1,10 +1,5 @@
 package fi.hsl.transitdata.eke_sink.csv
 
-import mu.KotlinLogging
-import org.apache.commons.compress.compressors.gzip.GzipCompressorOutputStream
-import org.apache.commons.compress.compressors.gzip.GzipParameters
-import org.apache.commons.csv.CSVFormat
-import org.apache.commons.csv.CSVPrinter
 import java.io.Closeable
 import java.io.OutputStreamWriter
 import java.nio.charset.StandardCharsets
@@ -14,6 +9,11 @@ import java.time.Duration
 import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
 import java.util.zip.Deflater
+import mu.KotlinLogging
+import org.apache.commons.compress.compressors.gzip.GzipCompressorOutputStream
+import org.apache.commons.compress.compressors.gzip.GzipParameters
+import org.apache.commons.csv.CSVFormat
+import org.apache.commons.csv.CSVPrinter
 
 private val log = KotlinLogging.logger {}
 
@@ -22,8 +22,10 @@ class CsvFile(val path: Path, private val unitNumber: String, csvHeader: List<St
         private const val WRITE_BUFFER_SIZE = 65536
         private const val REPLACEMENT_CHAR = "_"
         private val invalidChars = Regex("[^a-zA-Z0-9 +\\-./:=_]")
+
         fun sanitizeTags(tags: Map<String, String>): Map<String, String> =
-            tags.asSequence()
+            tags
+                .asSequence()
                 .mapNotNull { (key, value) ->
                     val sanitizedKey = key.replace(invalidChars, REPLACEMENT_CHAR).take(128)
                     val sanitizedValue = value.replace(invalidChars, REPLACEMENT_CHAR).take(256)
@@ -32,13 +34,20 @@ class CsvFile(val path: Path, private val unitNumber: String, csvHeader: List<St
                 .toMap()
     }
 
-    private var csvPrinter: CSVPrinter? = CSVPrinter(
-        OutputStreamWriter(GzipCompressorOutputStream(Files.newOutputStream(path), GzipParameters().apply {
-            compressionLevel = Deflater.BEST_COMPRESSION
-            bufferSize = WRITE_BUFFER_SIZE
-        }), StandardCharsets.UTF_8),
-        CSVFormat.RFC4180.builder().setHeader(*csvHeader.toTypedArray()).build()
-    )
+    private var csvPrinter: CSVPrinter? =
+        CSVPrinter(
+            OutputStreamWriter(
+                GzipCompressorOutputStream(
+                    Files.newOutputStream(path),
+                    GzipParameters().apply {
+                        compressionLevel = Deflater.BEST_COMPRESSION
+                        bufferSize = WRITE_BUFFER_SIZE
+                    }
+                ),
+                StandardCharsets.UTF_8
+            ),
+            CSVFormat.RFC4180.builder().setHeader(*csvHeader.toTypedArray()).build()
+        )
     private var open: Boolean = true
     private var lastModified: Long = System.nanoTime()
 
@@ -68,8 +77,12 @@ class CsvFile(val path: Path, private val unitNumber: String, csvHeader: List<St
         val tags = mutableMapOf<String, String>()
         tags["unit_number"] = unitNumber
         tags["row_count"] = rowCount.toString()
-        minNtpTime?.format(DateTimeFormatter.ISO_OFFSET_DATE_TIME)?.let { tags["min_ntp_timestamp"] = it }
-        maxNtpTime?.format(DateTimeFormatter.ISO_OFFSET_DATE_TIME)?.let { tags["max_ntp_timestamp"] = it }
+        minNtpTime?.format(DateTimeFormatter.ISO_OFFSET_DATE_TIME)?.let {
+            tags["min_ntp_timestamp"] = it
+        }
+        maxNtpTime?.format(DateTimeFormatter.ISO_OFFSET_DATE_TIME)?.let {
+            tags["max_ntp_timestamp"] = it
+        }
         return CsvFile.sanitizeTags(tags)
     }
 
@@ -79,7 +92,7 @@ class CsvFile(val path: Path, private val unitNumber: String, csvHeader: List<St
         if (open) {
             csvPrinter?.close(true)
             csvPrinter = null
-            Runtime.getRuntime().gc() //Is this needed?
+            Runtime.getRuntime().gc() // Is this needed?
         }
         open = false
     }

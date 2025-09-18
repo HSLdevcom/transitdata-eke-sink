@@ -10,6 +10,7 @@ plugins {
     id 'java'
     id 'org.jetbrains.kotlin.jvm' version '1.4.30'
     id 'maven'
+    id 'com.diffplug.spotless' version '6.25.0'
 }
 
 group 'fi.hsl'
@@ -23,6 +24,16 @@ repositories {
             username = project.findProperty("github.user") ?: System.getenv("GITHUB_ACTOR")
             password = project.findProperty("github.token") ?: System.getenv("GITHUB_TOKEN")
         }
+    }
+}
+
+spotless {
+    kotlin {
+        ktfmt('0.44').kotlinlangStyle()
+    }
+
+    kotlinGradle {
+        ktfmt('0.44').kotlinlangStyle()
     }
 }
 
@@ -56,7 +67,7 @@ dependencies {
 
     implementation "io.github.microutils:kotlin-logging:1.6.22"
 
-    implementation('fi.hsl:transitdata-common:2.0.2.0') {
+    implementation('fi.hsl:transitdata-common:2.0.5') {
         exclude group: 'javax.xml.bind', module: 'activation'
 		exclude group: 'com.google.guava', module: 'guava'
     }

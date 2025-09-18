@@ -8,7 +8,11 @@ class CsvFileTest {
         val inputTags = mapOf("unit_number" to "70'B")
         val expectedTags = mapOf("unit_number" to "70_B")
         val outputTags = CsvFile.sanitizeTags(inputTags)
-        assertEquals("The sanitized tags do not match the expected output.", expectedTags, outputTags)
+        assertEquals(
+            "The sanitized tags do not match the expected output.",
+            expectedTags,
+            outputTags
+        )
     }
 
     @Test

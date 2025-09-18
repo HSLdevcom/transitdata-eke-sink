@@ -5,7 +5,11 @@ import java.time.ZoneId
 import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
 
-data class ConnectionStatus(val status: String, val connected: Boolean, val timestamp: ZonedDateTime?) {
+data class ConnectionStatus(
+    val status: String,
+    val connected: Boolean,
+    val timestamp: ZonedDateTime?
+) {
     companion object {
         const val CONNECTION_STATUS_MESSAGE_TYPE = 99
 
@@ -14,8 +18,14 @@ data class ConnectionStatus(val status: String, val connected: Boolean, val time
         private val TIMEZONE = ZoneId.of("Europe/Helsinki")
 
         private fun parseConnectionStatusTimestamp(string: String): ZonedDateTime {
-            val trimmedString = string.trim().trim('\u0000') //Trim whitespace and null characters so that the date can be parsed
-            return LocalDateTime.parse(trimmedString, DateTimeFormatter.ofPattern(TIMESTAMP_FORMAT)).atZone(TIMEZONE)
+            val trimmedString =
+                string
+                    .trim()
+                    .trim(
+                        '\u0000'
+                    ) // Trim whitespace and null characters so that the date can be parsed
+            return LocalDateTime.parse(trimmedString, DateTimeFormatter.ofPattern(TIMESTAMP_FORMAT))
+                .atZone(TIMEZONE)
         }
 
         fun parseConnectionStatus(byteArray: ByteArray): ConnectionStatus? {
@@ -23,14 +33,22 @@ data class ConnectionStatus(val status: String, val connected: Boolean, val time
 
             return when {
                 messageString.startsWith("disconnected") -> {
-                    //Disconnected last-will message, no timestamp
+                    // Disconnected last-will message, no timestamp
                     ConnectionStatus(messageString, false, null)
                 }
                 messageString.startsWith("Disconnected at") -> {
-                    ConnectionStatus(messageString, false, parseConnectionStatusTimestamp(messageString.split(" ").last()))
+                    ConnectionStatus(
+                        messageString,
+                        false,
+                        parseConnectionStatusTimestamp(messageString.split(" ").last())
+                    )
                 }
                 messageString.startsWith("Connected at") -> {
-                    ConnectionStatus(messageString, true, parseConnectionStatusTimestamp(messageString.split(" ").last()))
+                    ConnectionStatus(
+                        messageString,
+                        true,
+                        parseConnectionStatusTimestamp(messageString.split(" ").last())
+                    )
                 }
                 else -> {
                     null
