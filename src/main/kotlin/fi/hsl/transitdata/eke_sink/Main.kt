@@ -47,8 +47,8 @@ fun main(vararg args: String) {
                 } else {
                     log.info { "Using Azure sink for uploading files to Blob Storage" }
                     AzureSink(
-                        BlobUploader(
-                            config.getString("application.blobConnectionString"),
+                        BlobUploader.withDefaultAzureCredential(
+                            config.getString("application.blobAccountName"),
                             config.getString("application.blobContainer")
                         )
                     )
