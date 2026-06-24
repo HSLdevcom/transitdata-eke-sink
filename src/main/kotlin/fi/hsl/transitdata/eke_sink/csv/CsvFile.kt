@@ -9,6 +9,7 @@ import java.time.Duration
 import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
 import java.util.zip.Deflater
+import java.time.Instant
 import mu.KotlinLogging
 import org.apache.commons.compress.compressors.gzip.GzipCompressorOutputStream
 import org.apache.commons.compress.compressors.gzip.GzipParameters
@@ -33,6 +34,11 @@ class CsvFile(val path: Path, private val unitNumber: String, csvHeader: List<St
                 }
                 .toMap()
     }
+
+    private val createdAt = Instant.now()
+
+    fun getCreatedAgo(): Duration =
+        Duration.between(createdAt, Instant.now())
 
     private var csvPrinter: CSVPrinter? =
         CSVPrinter(
