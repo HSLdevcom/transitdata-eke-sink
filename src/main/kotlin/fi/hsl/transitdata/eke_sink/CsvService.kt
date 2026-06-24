@@ -26,8 +26,9 @@ class CsvService(
     sink: Sink,
     private val msgAcknowledger: (MessageId) -> Unit,
     uploadAfterNotModified: Duration,
+    private val uploadAfterCreated: Duration,
     tryUploadInterval: Duration =
-        minOf(Duration.ofMinutes(5), uploadAfterNotModified.multipliedBy(2))
+        minOf(Duration.ofMinutes(5), uploadAfterNotModified, uploadAfterCreated)
 ) {
     companion object {
         private const val TOPIC_PREFIX = "eke/v1/sm5/"
@@ -40,7 +41,8 @@ class CsvService(
             {
                 val readyForUpload =
                     csvFiles.filterValues { csvFile ->
-                        csvFile.getLastModifiedAgo() >= uploadAfterNotModified
+                        csvFile.getLastModifiedAgo() >= uploadAfterNotModified ||
+                            csvFile.getCreatedAgo() >= uploadAfterCreated
                     }
 
                 readyForUpload.values.forEach { it.close() }

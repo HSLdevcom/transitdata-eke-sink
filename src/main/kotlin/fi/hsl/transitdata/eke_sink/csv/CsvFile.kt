@@ -34,6 +34,11 @@ class CsvFile(val path: Path, private val unitNumber: String, csvHeader: List<St
                 .toMap()
     }
 
+    private val createdAt = Instant.now()
+
+    fun getCreatedAgo(): Duration =
+        Duration.between(createdAt, Instant.now())
+
     private var csvPrinter: CSVPrinter? =
         CSVPrinter(
             OutputStreamWriter(
