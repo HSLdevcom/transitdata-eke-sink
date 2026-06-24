@@ -55,7 +55,7 @@ fun main(vararg args: String) {
                 }
 
             val uploadAfterNotModified = config.getDuration("application.uploadAfterNotModified")
-
+            val uploadAfterCreated = config.getDuration("application.uploadAfterCreated")
             fun ack(msgId: MessageId) {
                 context.consumer!!
                     .acknowledgeAsync(msgId)
@@ -65,7 +65,7 @@ fun main(vararg args: String) {
                     }
                     .thenRun {}
             }
-            val csvService = CsvService(dataDirectory, sink, ::ack, uploadAfterNotModified)
+            val csvService = CsvService(dataDirectory, sink, ::ack, uploadAfterNotModified, uploadAfterCreated)
 
             val messageHandler = MessageHandler(csvService)
 
