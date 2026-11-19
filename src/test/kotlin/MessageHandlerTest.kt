@@ -1,8 +1,4 @@
 import com.google.protobuf.ByteString
-import com.nhaarman.mockitokotlin2.any
-import com.nhaarman.mockitokotlin2.doAnswer
-import com.nhaarman.mockitokotlin2.doReturn
-import com.nhaarman.mockitokotlin2.mock
 import fi.hsl.common.mqtt.proto.Mqtt
 import fi.hsl.transitdata.eke_sink.CsvService
 import fi.hsl.transitdata.eke_sink.MessageHandler
@@ -21,6 +17,10 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
 import org.mockito.Mockito
+import org.mockito.kotlin.any
+import org.mockito.kotlin.doAnswer
+import org.mockito.kotlin.doReturn
+import org.mockito.kotlin.mock
 
 @ExperimentalTime
 class MessageHandlerTest {
@@ -63,7 +63,8 @@ class MessageHandlerTest {
                     LocalSink(uploadDirectory),
                     mockConsumer::acknowledgeAsync,
                     uploadAfterNotModified = Duration.ofSeconds(1),
-                    tryUploadInterval = Duration.ofSeconds(2)
+                    uploadAfterCreated = Duration.ofSeconds(1),
+                    tryUploadInterval = Duration.ofSeconds(2),
                 )
             )
         handler.handleMessage(
@@ -81,7 +82,7 @@ class MessageHandlerTest {
                     (Collections.singletonMap(
                         fi.hsl.common.transitdata.TransitdataProperties
                             .KEY_SOURCE_MESSAGE_TIMESTAMP_MS,
-                        java.time.Instant.now().toEpochMilli().toString()
+                        java.time.Instant.now().toEpochMilli().toString(),
                     ))
                 on { messageId } doReturn (mock<MessageId>())
             }

@@ -9,9 +9,10 @@ import java.nio.file.Files
 import java.nio.file.Path
 import mu.KotlinLogging
 
-class BlobUploader private constructor(
+class BlobUploader
+private constructor(
     private val blobServiceClient: BlobServiceClient,
-    private val container: String
+    private val container: String,
 ) {
     companion object {
         private const val BUFFER_SIZE = 65536
@@ -57,9 +58,7 @@ class BlobUploader private constructor(
         val outputStream =
             BufferedOutputStream(blobClient.blockBlobClient.getBlobOutputStream(true), BUFFER_SIZE)
 
-        outputStream.use {
-            Files.copy(path, it)
-        }
+        outputStream.use { Files.copy(path, it) }
 
         blobClient.tags = tags
     }

@@ -49,7 +49,7 @@ fun main(vararg args: String) {
                     AzureSink(
                         BlobUploader.withDefaultAzureCredential(
                             config.getString("application.blobAccountName"),
-                            config.getString("application.blobContainer")
+                            config.getString("application.blobContainer"),
                         )
                     )
                 }
@@ -65,7 +65,8 @@ fun main(vararg args: String) {
                     }
                     .thenRun {}
             }
-            val csvService = CsvService(dataDirectory, sink, ::ack, uploadAfterNotModified, uploadAfterCreated)
+            val csvService =
+                CsvService(dataDirectory, sink, ::ack, uploadAfterNotModified, uploadAfterCreated)
 
             val messageHandler = MessageHandler(csvService)
 

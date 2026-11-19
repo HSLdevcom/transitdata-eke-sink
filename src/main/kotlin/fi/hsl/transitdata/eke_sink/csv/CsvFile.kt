@@ -6,10 +6,10 @@ import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 import java.nio.file.Path
 import java.time.Duration
+import java.time.Instant
 import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
 import java.util.zip.Deflater
-import java.time.Instant
 import mu.KotlinLogging
 import org.apache.commons.compress.compressors.gzip.GzipCompressorOutputStream
 import org.apache.commons.compress.compressors.gzip.GzipParameters
@@ -37,8 +37,7 @@ class CsvFile(val path: Path, private val unitNumber: String, csvHeader: List<St
 
     private val createdAt = Instant.now()
 
-    fun getCreatedAgo(): Duration =
-        Duration.between(createdAt, Instant.now())
+    fun getCreatedAgo(): Duration = Duration.between(createdAt, Instant.now())
 
     private var csvPrinter: CSVPrinter? =
         CSVPrinter(
@@ -48,11 +47,11 @@ class CsvFile(val path: Path, private val unitNumber: String, csvHeader: List<St
                     GzipParameters().apply {
                         compressionLevel = Deflater.BEST_COMPRESSION
                         bufferSize = WRITE_BUFFER_SIZE
-                    }
+                    },
                 ),
-                StandardCharsets.UTF_8
+                StandardCharsets.UTF_8,
             ),
-            CSVFormat.RFC4180.builder().setHeader(*csvHeader.toTypedArray()).build()
+            CSVFormat.RFC4180.builder().setHeader(*csvHeader.toTypedArray()).build(),
         )
     private var open: Boolean = true
     private var lastModified: Long = System.nanoTime()

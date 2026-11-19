@@ -1,5 +1,6 @@
 package fi.hsl.transitdata.eke_sink
 
+import fi.hsl.common.metrics.PipelineMetrics
 import fi.hsl.common.mqtt.proto.Mqtt
 import fi.hsl.common.pulsar.IMessageHandler
 import fi.hsl.common.transitdata.TransitdataProperties
@@ -28,6 +29,8 @@ class MessageHandler(private val csvService: CsvService) : IMessageHandler {
             val rawPayload = raw.payload.toByteArray()
 
             csvService.writeToCsvFile(raw.topic, rawPayload, mqttTimestamp, received.messageId)
+
+            PipelineMetrics.observeLatencyFromSource("eke", received)
 
             if (++handledMessages == LOG_THRESHOLD) {
                 log.info(

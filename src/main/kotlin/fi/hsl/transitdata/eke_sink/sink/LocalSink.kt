@@ -19,7 +19,7 @@ import mu.KotlinLogging
 class LocalSink(
     private val outputDirectory: Path,
     private val delay: Duration = Duration.ZERO,
-    private val maxFiles: Int = -1
+    private val maxFiles: Int = -1,
 ) : Sink {
     private val log = KotlinLogging.logger {}
 
@@ -31,7 +31,7 @@ class LocalSink(
         }
         // Sleep for the remaining time
         val sleepTime = maxOf(Duration.ZERO, delay.minus(elapsedTime))
-        Thread.sleep(sleepTime.toLongMilliseconds())
+        Thread.sleep(sleepTime.inWholeMilliseconds)
 
         // Remove files if there are more than the maximum amount
         if (maxFiles >= 0) {

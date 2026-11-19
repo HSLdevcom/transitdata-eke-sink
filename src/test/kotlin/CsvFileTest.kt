@@ -11,7 +11,7 @@ class CsvFileTest {
         assertEquals(
             "The sanitized tags do not match the expected output.",
             expectedTags,
-            outputTags
+            outputTags,
         )
     }
 
