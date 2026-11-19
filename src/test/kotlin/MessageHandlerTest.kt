@@ -1,8 +1,8 @@
 import com.google.protobuf.ByteString
-import org.mockito.kotlin.any
-import org.mockito.kotlin.doAnswer
-import org.mockito.kotlin.doReturn
-import org.mockito.kotlin.mock
+import com.nhaarman.mockitokotlin2.any
+import com.nhaarman.mockitokotlin2.doAnswer
+import com.nhaarman.mockitokotlin2.doReturn
+import com.nhaarman.mockitokotlin2.mock
 import com.typesafe.config.Config
 import fi.hsl.common.mqtt.proto.Mqtt
 import fi.hsl.common.pulsar.PulsarApplicationContext
