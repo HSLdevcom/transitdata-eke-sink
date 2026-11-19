@@ -1,0 +1,14 @@
+name: CI/CD
+
+permissions:
+  contents: read
+  packages: read
+
+on: [push, pull_request]
+
+jobs:
+  ci-cd:
+    uses: HSLdevcom/transitdata-shared-workflows/.github/workflows/ci-cd-kotlin.yml@1.1.0
+    secrets: inherit
+    with:
+      runTestsInsideDocker: true
