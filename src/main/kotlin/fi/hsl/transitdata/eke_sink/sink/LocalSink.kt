@@ -26,7 +26,7 @@ class LocalSink(private val outputDirectory: Path, private val delay: Duration =
         }
         //Sleep for the remaining time
         val sleepTime = maxOf(Duration.ZERO, delay.minus(elapsedTime))
-        Thread.sleep(sleepTime.toLongMilliseconds())
+        Thread.sleep(sleepTime.inWholeMilliseconds)
 
         //Remove files if there are more than the maximum amount
         if (maxFiles >= 0) {
