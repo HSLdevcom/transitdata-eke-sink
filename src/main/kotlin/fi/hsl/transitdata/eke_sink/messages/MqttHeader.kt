@@ -17,7 +17,7 @@ data class MqttHeader(
     val ekeTime: Int,
     val ekeTimeHundredsOfSecond: Int,
     val ntpTime: Int,
-    val ntpTimeHundredsOfSecond: Int
+    val ntpTimeHundredsOfSecond: Int,
 ) {
 
     companion object {
@@ -54,7 +54,7 @@ data class MqttHeader(
                 ekeTime,
                 ekeTimeHundredsOfSecond,
                 ntpTime,
-                ntpTimeHundredsOfSecond
+                ntpTimeHundredsOfSecond,
             )
         }
 

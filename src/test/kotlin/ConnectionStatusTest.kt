@@ -16,7 +16,7 @@ class ConnectionStatusTest {
         assertNotNull(connectionStatus.timestamp)
         assertEquals(
             LocalDateTime.of(2021, 8, 17, 16, 0, 0),
-            connectionStatus.timestamp!!.toLocalDateTime()
+            connectionStatus.timestamp!!.toLocalDateTime(),
         )
     }
 }

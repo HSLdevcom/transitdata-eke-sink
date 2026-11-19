@@ -28,7 +28,7 @@ class CsvService(
     uploadAfterNotModified: Duration,
     private val uploadAfterCreated: Duration,
     tryUploadInterval: Duration =
-        minOf(Duration.ofMinutes(5), uploadAfterNotModified, uploadAfterCreated)
+        minOf(Duration.ofMinutes(5), uploadAfterNotModified, uploadAfterCreated),
 ) {
     companion object {
         private const val TOPIC_PREFIX = "eke/v1/sm5/"
@@ -84,7 +84,7 @@ class CsvService(
             },
             tryUploadInterval.seconds,
             tryUploadInterval.seconds,
-            TimeUnit.SECONDS
+            TimeUnit.SECONDS,
         ) // TODO: allow changing these values
     }
 
@@ -108,7 +108,7 @@ class CsvService(
         mqttTopic: String,
         mqttPayload: ByteArray,
         mqttReceivedAt: Instant?,
-        messageId: MessageId
+        messageId: MessageId,
     ) {
         if (mqttReceivedAt == null) {
             log.warn { "No MQTT received timestamp, cannot store message" }
@@ -121,7 +121,7 @@ class CsvService(
         val csvFile =
             getCsvFile(
                 mqttTopic,
-                mqttTimeUtc.withZoneSameInstant(ZoneId.of("Europe/Helsinki")).toLocalDateTime()
+                mqttTimeUtc.withZoneSameInstant(ZoneId.of("Europe/Helsinki")).toLocalDateTime(),
             )
 
         val csvRow =

@@ -8,7 +8,7 @@ import java.time.format.DateTimeFormatter
 data class ConnectionStatus(
     val status: String,
     val connected: Boolean,
-    val timestamp: ZonedDateTime?
+    val timestamp: ZonedDateTime?,
 ) {
     companion object {
         const val CONNECTION_STATUS_MESSAGE_TYPE = 99
@@ -40,14 +40,14 @@ data class ConnectionStatus(
                     ConnectionStatus(
                         messageString,
                         false,
-                        parseConnectionStatusTimestamp(messageString.split(" ").last())
+                        parseConnectionStatusTimestamp(messageString.split(" ").last()),
                     )
                 }
                 messageString.startsWith("Connected at") -> {
                     ConnectionStatus(
                         messageString,
                         true,
-                        parseConnectionStatusTimestamp(messageString.split(" ").last())
+                        parseConnectionStatusTimestamp(messageString.split(" ").last()),
                     )
                 }
                 else -> {

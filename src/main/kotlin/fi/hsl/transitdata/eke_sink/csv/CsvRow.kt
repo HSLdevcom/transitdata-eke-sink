@@ -12,7 +12,7 @@ data class CsvRow(
     val ekeTime: ZonedDateTime?,
     val mqttTime: ZonedDateTime,
     val mqttTopic: String,
-    val rawData: String
+    val rawData: String,
 ) {
     companion object {
         val CSV_HEADER =
@@ -23,14 +23,14 @@ data class CsvRow(
                 "eke_timestamp",
                 "mqtt_timestamp",
                 "mqtt_topic",
-                "raw_data"
+                "raw_data",
             )
 
         fun create(
             mqttTopic: String,
             mqttTime: ZonedDateTime,
             mqttHeader: MqttHeader,
-            rawData: String
+            rawData: String,
         ): CsvRow =
             CsvRow(
                 mqttHeader.messageType,
@@ -39,13 +39,13 @@ data class CsvRow(
                 mqttHeader.ekeTimeExact,
                 mqttTime,
                 mqttTopic,
-                rawData
+                rawData,
             )
 
         fun create(
             mqttTopic: String,
             mqttTime: ZonedDateTime,
-            connectionStatus: ConnectionStatus
+            connectionStatus: ConnectionStatus,
         ): CsvRow =
             CsvRow(
                 ConnectionStatus.CONNECTION_STATUS_MESSAGE_TYPE,
@@ -54,7 +54,7 @@ data class CsvRow(
                 connectionStatus.timestamp,
                 mqttTime,
                 mqttTopic,
-                connectionStatus.status
+                connectionStatus.status,
             )
     }
 
@@ -66,7 +66,7 @@ data class CsvRow(
             ekeTime?.format(DateTimeFormatter.ISO_OFFSET_DATE_TIME) ?: "",
             mqttTime.format(DateTimeFormatter.ISO_OFFSET_DATE_TIME),
             mqttTopic,
-            rawData
+            rawData,
         )
     }
 }
