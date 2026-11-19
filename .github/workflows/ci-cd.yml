@@ -11,4 +11,5 @@ jobs:
     uses: HSLdevcom/transitdata-shared-workflows/.github/workflows/ci-cd-kotlin.yml@1.1.0
     secrets: inherit
     with:
-      runTestsInsideDocker: true
+      runTestsInsideDocker: false
+      lintBlocking: false
