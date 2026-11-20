@@ -2,6 +2,12 @@
 
 Application for parsing EKE data messages, storing them in compressed CSV files and uploading the CSV files to blob storage. This application is part of [Transitdata](https://github.com/HSLdevcom/transitdata).
 
+## Startup behavior
+
+On every service start, the Pulsar subscription cursor is reset to latest, skipping queued messages, including any unprocessed messages from before shutdown. Set `PULSAR_CONSUMER_CURSOR_RESET_TO_LATEST=false` to resume from the existing subscription cursor instead.
+
+This does not filter old train data that is published into Pulsar after startup.
+
 ## Data format
 
 The CSV format that is used by the files that this application produces is following:
