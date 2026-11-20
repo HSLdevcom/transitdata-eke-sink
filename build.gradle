@@ -1,21 +1,35 @@
-buildscript {
-    repositories {
-        mavenCentral()
-        gradlePluginPortal()
-    }
-}
-
 plugins {
-    id 'com.github.johnrengelman.shadow' version '6.0.0'
     id 'java'
-    id 'org.jetbrains.kotlin.jvm' version '1.4.30'
-    id 'maven'
+    id 'jacoco'
+    id 'org.jetbrains.kotlin.jvm' version '2.2.20'
+    id 'com.gradleup.shadow' version '8.3.6'
+    id 'com.diffplug.spotless' version '7.0.4'
 }
 
 group 'fi.hsl'
-version '2.0.1'
+version '2.1.0'
+
+java {
+    // Compile with JDK 25 (required to read transitdata-common 3.2.0, which is Java 25 bytecode)
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(25)
+    }
+}
+
+// Kotlin does not support a JVM 25 target yet, so emit JVM 24 bytecode for both Java and
+// Kotlin. It still runs on the Java 25 runtime image.
+tasks.withType(JavaCompile).configureEach {
+    options.release = 24
+}
+compileKotlin {
+    kotlinOptions.jvmTarget = "24"
+}
+compileTestKotlin {
+    kotlinOptions.jvmTarget = "24"
+}
 
 repositories {
+    mavenLocal()
     mavenCentral()
     maven {
         url "https://maven.pkg.github.com/HSLdevcom/*"
@@ -26,8 +40,18 @@ repositories {
     }
 }
 
+spotless {
+    kotlin {
+        ktfmt('0.54').kotlinlangStyle()
+    }
+
+    kotlinGradle {
+        ktfmt('0.54').kotlinlangStyle()
+    }
+}
+
 shadowJar {
-    archiveFileName ="${baseName}.${extension}"
+    archiveFileName = "transitdata-eke-sink.jar"
 }
 
 jar {
@@ -39,26 +63,16 @@ jar {
     }
 }
 
-sourceSets {
-    main {
-        resources {
-            srcDirs "src/main/resources"
-        }
-    }
-}
-
 dependencies {
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8"
-
-    testImplementation 'org.hamcrest:hamcrest:2.2'
-    testImplementation group: 'junit', name: 'junit', version: '4.12'
-    testImplementation "com.nhaarman.mockitokotlin2:mockito-kotlin:2.2.0"
+    implementation "com.azure:azure-identity:1.13.3"
+    implementation 'com.fasterxml.jackson.dataformat:jackson-dataformat-xml:2.17.2'
 
     implementation "io.github.microutils:kotlin-logging:1.6.22"
 
-    implementation('fi.hsl:transitdata-common:2.0.2.0') {
+    implementation('fi.hsl:transitdata-common:3.2.0') {
         exclude group: 'javax.xml.bind', module: 'activation'
-		exclude group: 'com.google.guava', module: 'guava'
+        exclude group: 'com.google.guava', module: 'guava'
     }
     //Needed for Pulsar
     implementation 'jaxb:activation:1.0.2'
@@ -70,15 +84,21 @@ dependencies {
     implementation "org.apache.commons:commons-compress:1.21"
     implementation "commons-codec:commons-codec:1.15"
 
-    //implementation  fileTree(dir: 'libs', include: '*.jar')
+    testImplementation 'org.hamcrest:hamcrest:2.2'
+    testImplementation group: 'junit', name: 'junit', version: '4.13.2'
+    testImplementation "org.mockito.kotlin:mockito-kotlin:5.4.0"
+    // Pin mockito-core to a ByteBuddy that can instrument on the Java 25 runtime
+    testImplementation "org.mockito:mockito-core:5.23.0"
 }
 
-compileKotlin {
-    kotlinOptions.jvmTarget = JavaVersion.VERSION_11
-    kotlinOptions {
-        languageVersion = "1.4"
-    }
+test {
+    useJUnit()
+    finalizedBy jacocoTestReport
 }
-compileTestKotlin {
-    kotlinOptions.jvmTarget = JavaVersion.VERSION_11
+
+jacocoTestReport {
+    dependsOn test
+    reports {
+        xml.required = true
+    }
 }
